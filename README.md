@@ -1,5 +1,7 @@
 # Media Agent
 
+AI-assisted visual asset management for photographers and content creators.
+
 Media Agent is a local-first Python project for reviewing, organizing, and documenting large photo libraries. It scans a folder of image files, extracts metadata and EXIF data, evaluates basic visual quality, detects duplicate or similar photos, recommends the best image in each duplicate group, and generates both CSV and interactive HTML reports.
 
 The project is designed as a practical media workflow tool and as a portfolio-ready software project. It focuses on clear data structures, reproducible outputs, safe file handling, and a modular architecture that can later support real AI vision models and video processing.
@@ -26,6 +28,40 @@ The screenshots below were generated from a full 157-photo test run. Personal th
 ![Media Agent dashboard summary](docs/assets/media-agent-dashboard.png)
 
 ![Media Agent redacted report table](docs/assets/media-agent-report-redacted.png)
+
+## Project Architecture
+
+```mermaid
+flowchart LR
+    scanner["Scanner"]
+    metadata["Metadata Extraction"]
+    quality["Quality Analysis"]
+    similarity["Similarity Detection"]
+    best_pick["Best Pick Recommendation"]
+    ai_mock["AI Tagging Mock Provider"]
+    report["HTML Report"]
+    decisions["User Decision Export"]
+    organize["Safe File Organization"]
+
+    scanner --> metadata
+    metadata --> quality
+    quality --> similarity
+    similarity --> best_pick
+    best_pick --> ai_mock
+    ai_mock --> report
+    report --> decisions
+    decisions --> organize
+```
+
+## Portfolio Highlights
+
+- **Computer vision:** Uses OpenCV-based heuristics for blur and exposure analysis.
+- **Perceptual hashing:** Detects duplicate and similar images with pHash Hamming distance.
+- **EXIF metadata processing:** Extracts camera, lens, exposure, focal length, ISO, and capture-time metadata.
+- **Recommendation logic:** Combines quality scores, duplicate grouping, and image resolution to recommend keep, review, or reject candidates.
+- **Human-in-the-loop review:** Keeps final user decisions in the browser and exports them as `decisions.csv`.
+- **Safe file organization:** Copies or moves reviewed files into decision folders without providing a destructive delete workflow.
+- **Bilingual report support:** Generates English and Chinese HTML reports from the same processing pipeline.
 
 ## Supported Media
 
@@ -246,6 +282,11 @@ Safety principles:
 +-- main.py
 +-- requirements.txt
 +-- README.md
++-- LICENSE
++-- demo_media
++-- scripts
+|   +-- generate_demo_media.py
++-- tests
 +-- media_agent
     +-- __init__.py
     +-- scanner.py
@@ -347,14 +388,25 @@ Safety principles:
 Clone the repository, enter the project directory, create a virtual environment, and install dependencies:
 
 ```bash
-git clone https://github.com/your-username/media-agent.git
+git clone https://github.com/HouJue919/media-agent.git
 cd media-agent
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-Replace the repository URL and directory name with your actual GitHub repository if different.
+Replace the repository URL and directory name if you are using a fork.
+
+## Demo Quick Start
+
+Media Agent includes a generated public demo dataset. The demo images are synthetic assets created with Python and Pillow, not private photos.
+
+```bash
+python scripts/generate_demo_media.py
+python main.py demo_media --language en --report demo_report.html --enable-ai-tags --ai-provider mock
+```
+
+This creates a local `demo_report.html`, `media_index.csv`, and `thumbnails/`. These generated outputs are ignored by Git.
 
 ## Usage
 
@@ -460,6 +512,18 @@ python main.py --decisions decisions.csv --mode move
 
 There is intentionally no delete mode.
 
+## Testing
+
+Install dependencies and run the test suite:
+
+```bash
+pip install -r requirements.txt
+pip install pytest
+pytest
+```
+
+The tests cover scanner extension handling, perceptual-hash duplicate grouping, best-pick ranking, and safe organization behavior.
+
 ## Main Output Files
 
 ### `media_index.csv`
@@ -534,3 +598,7 @@ python main.py --decisions decisions.csv --organize-output organized_media --mod
 ## Status
 
 Media Agent is currently a working local prototype at **v2.2**. It is ready for small to medium photo review workflows and is structured for future AI and video expansion.
+
+## License
+
+This project is licensed under the MIT License.
