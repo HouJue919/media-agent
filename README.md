@@ -2,6 +2,8 @@
 
 AI-assisted visual asset management for photographers and content creators.
 
+[![Media Agent CI](https://github.com/HouJue919/media-agent/actions/workflows/test.yml/badge.svg)](https://github.com/HouJue919/media-agent/actions/workflows/test.yml)
+
 Current release: v0.1.0 Portfolio Release
 
 Media Agent is a local-first Python project for reviewing, organizing, and documenting large photo libraries. It scans a folder of image files, extracts metadata and EXIF data, evaluates basic visual quality, detects duplicate or similar photos, recommends the best image in each duplicate group, and generates both CSV and interactive HTML reports.
@@ -64,6 +66,14 @@ flowchart LR
 - **Human-in-the-loop review:** Keeps final user decisions in the browser and exports them as `decisions.csv`.
 - **Safe file organization:** Copies or moves reviewed files into decision folders without providing a destructive delete workflow.
 - **Bilingual report support:** Generates English and Chinese HTML reports from the same processing pipeline.
+
+## Engineering Quality
+
+- Automated pytest test suite
+- GitHub Actions CI
+- Reproducible demo dataset
+- Safe file organization
+- No private media required for testing
 
 ## Supported Media
 
