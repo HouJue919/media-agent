@@ -10,6 +10,8 @@ Media Agent is a local-first Python project for reviewing, organizing, and docum
 
 The project is designed as a practical media workflow tool and as a portfolio-ready software project. It focuses on clear data structures, reproducible outputs, safe file handling, and a modular architecture that can later support real AI vision models and video processing.
 
+This repository includes a reproducible synthetic demo dataset and automated GitHub Actions CI, so the project can be tested without private media files.
+
 ## Project Overview
 
 Modern photo libraries often contain hundreds or thousands of images from cameras, phones, drones, and action cameras. Many files are blurry, underexposed, overexposed, duplicated, or only useful as archive material. Media Agent provides a structured first pass over that media:
