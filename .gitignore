@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.py[cod]
+.DS_Store
+*.html
+media_index.csv
+report.html
+report_*.html
+decisions.csv
+organized_media/
+thumbnails/
+test_outputs/
+sample_media/
