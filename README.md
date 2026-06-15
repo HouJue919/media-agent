@@ -2,6 +2,8 @@
 
 AI-assisted visual asset management for photographers and content creators.
 
+Current release: v0.1.0 Portfolio Release
+
 Media Agent is a local-first Python project for reviewing, organizing, and documenting large photo libraries. It scans a folder of image files, extracts metadata and EXIF data, evaluates basic visual quality, detects duplicate or similar photos, recommends the best image in each duplicate group, and generates both CSV and interactive HTML reports.
 
 The project is designed as a practical media workflow tool and as a portfolio-ready software project. It focuses on clear data structures, reproducible outputs, safe file handling, and a modular architecture that can later support real AI vision models and video processing.
