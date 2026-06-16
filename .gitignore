@@ -6,10 +6,13 @@ __pycache__/
 .DS_Store
 *.html
 media_index.csv
+video_index.csv
 report.html
 report_*.html
 decisions.csv
 organized_media/
 thumbnails/
+video_keyframes/
+demo_videos/
 test_outputs/
 sample_media/

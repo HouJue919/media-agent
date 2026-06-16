@@ -6,7 +6,9 @@ AI-assisted visual asset management for photographers and content creators.
 
 Current release: v0.1.0 Portfolio Release
 
-Media Agent is a local-first Python project for reviewing, organizing, and documenting large photo libraries. It scans a folder of image files, extracts metadata and EXIF data, evaluates basic visual quality, detects duplicate or similar photos, recommends the best image in each duplicate group, and generates both CSV and interactive HTML reports.
+Current development milestone: v0.2.0 Video Keyframe Analysis
+
+Media Agent is a local-first Python project for reviewing, organizing, and documenting large photo and video libraries. It scans folders of media files, extracts metadata and EXIF data, evaluates basic visual quality, detects duplicate or similar photos, recommends the best image in each duplicate group, and generates both CSV and interactive HTML reports.
 
 The project is designed as a practical media workflow tool and as a portfolio-ready software project. It focuses on clear data structures, reproducible outputs, safe file handling, and a modular architecture that can later support real AI vision models and video processing.
 
@@ -16,16 +18,17 @@ This repository includes a reproducible synthetic demo dataset and automated Git
 
 Modern photo libraries often contain hundreds or thousands of images from cameras, phones, drones, and action cameras. Many files are blurry, underexposed, overexposed, duplicated, or only useful as archive material. Media Agent provides a structured first pass over that media:
 
-- Scan a photo folder and build a searchable media index.
+- Scan a photo or video folder and build a searchable media index.
 - Extract camera and image metadata.
 - Generate thumbnails for fast visual review.
 - Score exposure and sharpness using traditional computer vision.
 - Detect duplicate or visually similar images with perceptual hashing.
+- Extract video keyframes with `ffmpeg` and score video quality from sampled frames.
 - Recommend keep, review, or reject candidates.
 - Let the user make final decisions in an HTML report.
 - Safely organize selected files without deleting originals.
 
-The current version is **v2.2**.
+The current development milestone is **v0.2.0 Video Keyframe Analysis**.
 
 ## Screenshots
 
@@ -39,7 +42,7 @@ The screenshots below were generated from a full 157-photo test run. Personal th
 
 ```mermaid
 flowchart LR
-    scanner["Scanner"]
+    scanner["Photo Scanner"]
     metadata["Metadata Extraction"]
     quality["Quality Analysis"]
     similarity["Similarity Detection"]
@@ -48,6 +51,11 @@ flowchart LR
     report["HTML Report"]
     decisions["User Decision Export"]
     organize["Safe File Organization"]
+    video_scanner["Video Scanner"]
+    video_metadata["Video Metadata (ffprobe)"]
+    keyframes["Keyframe Extraction (ffmpeg)"]
+    video_quality["Keyframe Quality Analysis"]
+    video_report["Video Report"]
 
     scanner --> metadata
     metadata --> quality
@@ -57,6 +65,10 @@ flowchart LR
     ai_mock --> report
     report --> decisions
     decisions --> organize
+    video_scanner --> video_metadata
+    video_metadata --> keyframes
+    keyframes --> video_quality
+    video_quality --> video_report
 ```
 
 ## Portfolio Highlights
@@ -64,6 +76,7 @@ flowchart LR
 - **Computer vision:** Uses OpenCV-based heuristics for blur and exposure analysis.
 - **Perceptual hashing:** Detects duplicate and similar images with pHash Hamming distance.
 - **EXIF metadata processing:** Extracts camera, lens, exposure, focal length, ISO, and capture-time metadata.
+- **Video keyframe analysis:** Uses `ffmpeg` sampling and the existing image quality pipeline for initial video scoring.
 - **Recommendation logic:** Combines quality scores, duplicate grouping, and image resolution to recommend keep, review, or reject candidates.
 - **Human-in-the-loop review:** Keeps final user decisions in the browser and exports them as `decisions.csv`.
 - **Safe file organization:** Copies or moves reviewed files into decision folders without providing a destructive delete workflow.
@@ -87,11 +100,17 @@ Current photo formats:
 - `.heic`
 - `.arw`
 
+Current video formats:
+
+- `.mp4`
+- `.mov`
+- `.m4v`
+
 Notes:
 
 - HEIC support depends on `pillow-heif`.
 - ARW files are scanned and EXIF extraction is attempted. If local RAW decoding is unavailable, quality analysis may be skipped for that file without stopping the full export.
-- A `video` module is reserved for future video support, including frame extraction with `ffmpeg`.
+- Video mode requires `ffmpeg` and `ffprobe` on PATH.
 
 ## Features
 
@@ -256,7 +275,7 @@ Important:
 - No OpenAI API is used.
 - No network connection is required.
 - AI tagging is disabled by default.
-- The only supported provider in v2.0-v2.2 is `mock`.
+- The only supported provider in the current local AI-tagging workflow is `mock`.
 
 ### Safe File Organization
 
@@ -276,6 +295,22 @@ Safety principles:
 - File name collisions are handled automatically.
 - Every action is written to `organize_log.csv`.
 
+### Video Keyframe Analysis
+
+Media Agent v0.2.0 adds a separate video workflow for `.mp4`, `.mov`, and `.m4v` files.
+
+The video workflow:
+
+- Scans supported video files.
+- Reads video metadata with `ffprobe`.
+- Extracts sampled keyframes with `ffmpeg`.
+- Reuses the existing image quality pipeline for blur and exposure scoring.
+- Aggregates frame-level metrics into video-level recommendations.
+- Outputs `video_index.csv`.
+- Generates a bilingual `video_report.html`.
+
+Video support is based on keyframe extraction. The system does not analyze full video semantics yet. Future versions may add scene recognition, shot detection, stabilization scoring, and natural language search.
+
 ## Tech Stack
 
 - **Python 3** - command-line application and processing pipeline
@@ -285,6 +320,7 @@ Safety principles:
 - **NumPy** - numeric image processing
 - **exifread** - EXIF metadata extraction
 - **imagehash** - perceptual hash generation
+- **ffmpeg / ffprobe** - video metadata and keyframe extraction
 - **CSV** - portable structured output
 - **Static HTML, CSS, and JavaScript** - interactive reports without a backend server
 - **Browser localStorage** - local manual decision persistence
@@ -300,6 +336,7 @@ Safety principles:
 +-- demo_media
 +-- scripts
 |   +-- generate_demo_media.py
+|   +-- generate_demo_videos.py
 +-- tests
 +-- media_agent
     +-- __init__.py
@@ -317,6 +354,12 @@ Safety principles:
     |   +-- tagger.py
     +-- video
         +-- __init__.py
+        +-- analyzer.py
+        +-- export.py
+        +-- keyframes.py
+        +-- metadata.py
+        +-- report.py
+        +-- scanner.py
 ```
 
 ## Version Progress
@@ -397,6 +440,16 @@ Safety principles:
 - Included counts, percentages, duplicate statistics, best-pick count, waste count, average scores, AI provider, and report generation time.
 - Kept bilingual English and Chinese report support.
 
+### v0.2.0 - Video Keyframe Analysis
+
+- Added `.mp4`, `.mov`, and `.m4v` scanning.
+- Added `ffprobe` video metadata extraction.
+- Added `ffmpeg` keyframe extraction.
+- Reused image blur and exposure analysis for video keyframes.
+- Added video-level quality summaries and recommendations.
+- Exported `video_index.csv`.
+- Generated bilingual `video_report.html`.
+
 ## Installation
 
 Clone the repository, enter the project directory, create a virtual environment, and install dependencies:
@@ -422,6 +475,15 @@ python main.py demo_media --language en --report demo_report.html --enable-ai-ta
 
 This creates a local `demo_report.html`, `media_index.csv`, and `thumbnails/`. These generated outputs are ignored by Git.
 
+For video mode, install `ffmpeg` first. If `ffmpeg` is available, this creates short synthetic demo videos locally:
+
+```bash
+python scripts/generate_demo_videos.py
+python main.py demo_videos --mode video --language en --report video_report.html --frame-interval 5 --max-frames 12
+```
+
+This creates a local `video_report.html`, `video_index.csv`, and `video_keyframes/`. These generated outputs are ignored by Git.
+
 ## Usage
 
 ### Basic Scan
@@ -435,6 +497,20 @@ This creates:
 - `media_index.csv`
 - `report.html`
 - `thumbnails/`
+
+### Video Scan
+
+```bash
+python main.py /path/to/videos --mode video --language en --report video_report.html --frame-interval 5 --max-frames 12
+```
+
+This creates:
+
+- `video_index.csv`
+- `video_report.html`
+- `video_keyframes/`
+
+Video mode samples keyframes every `--frame-interval` seconds, up to `--max-frames` per video. It requires `ffmpeg` and `ffprobe`.
 
 ### Generate a Chinese Report
 
@@ -515,13 +591,13 @@ python main.py --decisions decisions.csv --organize-output /path/to/organized_me
 Use copy mode explicitly:
 
 ```bash
-python main.py --decisions decisions.csv --mode copy
+python main.py --decisions decisions.csv --organize-mode copy
 ```
 
 Use move mode explicitly:
 
 ```bash
-python main.py --decisions decisions.csv --mode move
+python main.py --decisions decisions.csv --organize-mode move
 ```
 
 There is intentionally no delete mode.
@@ -537,6 +613,8 @@ pytest
 ```
 
 The tests cover scanner extension handling, perceptual-hash duplicate grouping, best-pick ranking, and safe organization behavior.
+
+Video scanner, video metadata parsing, and video recommendation logic are covered without requiring private video files. Keyframe extraction tests should be skipped or run locally when `ffmpeg` is not available.
 
 ## Main Output Files
 
@@ -555,6 +633,18 @@ Exported from the HTML report after manual review. It stores final user decision
 ### `organized_media/`
 
 The default output directory for safely copied or moved files based on manual decisions.
+
+### `video_index.csv`
+
+The structured video index generated by video mode. It includes video metadata, keyframe counts, aggregated blur and exposure metrics, and video-level recommendations.
+
+### `video_report.html`
+
+A static video quality report with a dashboard and keyframe previews.
+
+### `video_keyframes/`
+
+The generated keyframe directory used by the video report. It is ignored by Git.
 
 ## Design Principles
 
@@ -582,11 +672,13 @@ Planned directions include:
   - local CLIP
   - YOLO
   - BLIP
-- Video support:
-  - `ffmpeg` frame extraction
+- Advanced video analysis:
+  - scene recognition
+  - shot detection
+  - stabilization scoring
   - video thumbnails
   - scene-level tagging
-  - video quality signals
+  - natural language search
 - Configurable thresholds for blur, exposure, duplicate distance, and review logic.
 - Search and filter controls inside the HTML report.
 - Project profiles for different workflows, such as travel, documentary, social media, or archive cleanup.
@@ -606,12 +698,12 @@ python main.py /path/to/photos --language en --report report_en.html --enable-ai
 # 3. Export decisions.csv from the report.
 
 # 4. Safely copy selected files into organized folders.
-python main.py --decisions decisions.csv --organize-output organized_media --mode copy
+python main.py --decisions decisions.csv --organize-output organized_media --organize-mode copy
 ```
 
 ## Status
 
-Media Agent is currently a working local prototype at **v2.2**. It is ready for small to medium photo review workflows and is structured for future AI and video expansion.
+Media Agent is currently a working local prototype at **v0.2.0**. It is ready for small to medium photo review workflows and includes an initial keyframe-based video analysis workflow.
 
 ## License
 

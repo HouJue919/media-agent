@@ -2,20 +2,25 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
+from typing import Any
 
 from media_agent.organize import organize_from_decisions
 
 
+DEFAULT_PHOTO_OUTPUT = "media_index.csv"
+DEFAULT_VIDEO_OUTPUT = "video_index.csv"
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Scan photo media files, export reports, or organize files from decisions.csv."
+        description="Scan photo/video media files, export reports, or organize files from decisions.csv."
     )
-    parser.add_argument("folder", nargs="?", help="Folder to scan for image files.")
+    parser.add_argument("folder", nargs="?", help="Folder to scan for media files.")
     parser.add_argument(
         "-o",
         "--output",
-        default="media_index.csv",
-        help="Output CSV path. Defaults to media_index.csv.",
+        default=DEFAULT_PHOTO_OUTPUT,
+        help="Output CSV path. Defaults to media_index.csv for photo mode and video_index.csv for video mode.",
     )
     parser.add_argument(
         "--no-recursive",
@@ -46,7 +51,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--ai-provider",
         default="mock",
-        help="AI tagging provider. Only mock is supported in v2.0.",
+        help="AI tagging provider. Only mock is supported.",
     )
     parser.add_argument(
         "--decisions",
@@ -60,9 +65,26 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--mode",
+        default="photo",
+        help="Analysis mode: photo or video. Legacy copy/move values are accepted with --decisions.",
+    )
+    parser.add_argument(
+        "--organize-mode",
         choices=("copy", "move"),
-        default="copy",
-        help="Organize mode: copy or move. Defaults to copy.",
+        default=None,
+        help="Organize mode for --decisions: copy or move. Defaults to copy.",
+    )
+    parser.add_argument(
+        "--frame-interval",
+        type=float,
+        default=5.0,
+        help="Video mode only: extract one keyframe every N seconds. Defaults to 5.",
+    )
+    parser.add_argument(
+        "--max-frames",
+        type=int,
+        default=12,
+        help="Video mode only: maximum keyframes to extract per video. Defaults to 12.",
     )
     return parser.parse_args()
 
@@ -70,12 +92,13 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     if args.ai_provider != "mock":
-        raise SystemExit("Only mock provider is supported in v2.0.")
+        raise SystemExit("Only mock provider is supported.")
 
     if args.decisions:
         decisions_path = Path(args.decisions).expanduser().resolve()
         organize_output = Path(args.organize_output).expanduser().resolve()
-        log_path = organize_from_decisions(decisions_path, organize_output, mode=args.mode)
+        organize_mode = _resolve_organize_mode(args)
+        log_path = organize_from_decisions(decisions_path, organize_output, mode=organize_mode)
         print(f"Decisions read from: {decisions_path}")
         print(f"Organized media written to: {organize_output}")
         print(f"Organize log written to: {log_path}")
@@ -84,8 +107,32 @@ def main() -> None:
     if not args.folder:
         raise SystemExit("Folder is required unless --decisions is provided.")
 
-    from media_agent.best_pick import annotate_best_picks
+    folder = Path(args.folder).expanduser().resolve()
+    if not folder.exists():
+        raise FileNotFoundError(f"Folder does not exist: {folder}")
+    if not folder.is_dir():
+        raise NotADirectoryError(f"Path is not a folder: {folder}")
+
+    if args.mode == "photo":
+        _run_photo_workflow(args, folder)
+        return
+    if args.mode == "video":
+        _run_video_workflow(args, folder)
+        return
+    raise SystemExit("Mode must be 'photo' or 'video'. Use --organize-mode copy|move with --decisions for organization.")
+
+
+def _resolve_organize_mode(args: argparse.Namespace) -> str:
+    if args.organize_mode:
+        return args.organize_mode
+    if args.mode in {"copy", "move"}:
+        return args.mode
+    return "copy"
+
+
+def _run_photo_workflow(args: argparse.Namespace, folder: Path) -> None:
     from media_agent.ai_tagging.tagger import EMPTY_AI_TAGS, tag_media_item
+    from media_agent.best_pick import annotate_best_picks
     from media_agent.export import export_csv
     from media_agent.metadata import build_media_record
     from media_agent.quality import analyze_quality
@@ -94,7 +141,6 @@ def main() -> None:
     from media_agent.similarity import annotate_duplicate_groups
     from media_agent.thumbnail import create_thumbnail
 
-    folder = Path(args.folder).expanduser().resolve()
     output = Path(args.output).expanduser().resolve()
     thumbnail_dir = (
         Path(args.thumbnail_dir).expanduser().resolve()
@@ -102,12 +148,6 @@ def main() -> None:
         else output.parent / "thumbnails"
     )
     report_path = Path(args.report).expanduser().resolve()
-
-    if not folder.exists():
-        raise FileNotFoundError(f"Folder does not exist: {folder}")
-    if not folder.is_dir():
-        raise NotADirectoryError(f"Path is not a folder: {folder}")
-
     files = scan_media_files(folder, recursive=not args.no_recursive)
     records = []
 
@@ -129,6 +169,45 @@ def main() -> None:
     print(f"Scanned {len(records)} media files.")
     print(f"CSV written to: {output}")
     print(f"Thumbnails written to: {thumbnail_dir}")
+    print(f"HTML report written to: {report_path}")
+
+
+def _run_video_workflow(args: argparse.Namespace, folder: Path) -> None:
+    from media_agent.video.analyzer import analyze_video_keyframes
+    from media_agent.video.export import export_video_csv
+    from media_agent.video.keyframes import extract_keyframes
+    from media_agent.video.metadata import read_video_metadata
+    from media_agent.video.report import export_video_html_report, sort_video_records
+    from media_agent.video.scanner import scan_video_files
+
+    if args.frame_interval <= 0:
+        raise SystemExit("--frame-interval must be greater than 0.")
+    if args.max_frames <= 0:
+        raise SystemExit("--max-frames must be greater than 0.")
+
+    output_name = DEFAULT_VIDEO_OUTPUT if args.output == DEFAULT_PHOTO_OUTPUT else args.output
+    output = Path(output_name).expanduser().resolve()
+    report_path = Path(args.report).expanduser().resolve()
+    keyframe_root = report_path.parent / "video_keyframes"
+
+    files = scan_video_files(folder, recursive=not args.no_recursive)
+    records: list[dict[str, Any]] = []
+
+    for file_path in files:
+        record = read_video_metadata(file_path)
+        keyframe_paths = extract_keyframes(file_path, keyframe_root, args.frame_interval, args.max_frames)
+        keyframe_dir = keyframe_root / file_path.stem
+        record["keyframe_dir"] = str(keyframe_dir)
+        record["keyframe_paths"] = [str(path) for path in keyframe_paths]
+        record.update(analyze_video_keyframes(keyframe_paths))
+        records.append(record)
+
+    records = sort_video_records(records)
+    export_video_csv(records, output)
+    export_video_html_report(records, report_path, language=args.language)
+    print(f"Scanned {len(records)} video files.")
+    print(f"CSV written to: {output}")
+    print(f"Keyframes written to: {keyframe_root}")
     print(f"HTML report written to: {report_path}")
 
 
