@@ -64,9 +64,25 @@ def parse_args() -> argparse.Namespace:
         help="Output directory for organized files. Defaults to organized_media.",
     )
     parser.add_argument(
+        "--video-decisions",
+        default=None,
+        help="Read video_decisions.csv and organize videos when --mode video-organize is used.",
+    )
+    parser.add_argument(
+        "--video-organize-output",
+        default="organized_videos",
+        help="Output directory for organized videos. Defaults to organized_videos.",
+    )
+    parser.add_argument(
+        "--mode-action",
+        choices=("copy", "move"),
+        default="copy",
+        help="Video organize action: copy or move. Defaults to copy.",
+    )
+    parser.add_argument(
         "--mode",
         default="photo",
-        help="Analysis mode: photo or video. Legacy copy/move values are accepted with --decisions.",
+        help="Mode: photo, video, or video-organize. Legacy copy/move values are accepted with --decisions.",
     )
     parser.add_argument(
         "--organize-mode",
@@ -94,6 +110,10 @@ def main() -> None:
     if args.ai_provider != "mock":
         raise SystemExit("Only mock provider is supported.")
 
+    if args.mode == "video-organize":
+        _run_video_organize_workflow(args)
+        return
+
     if args.decisions:
         decisions_path = Path(args.decisions).expanduser().resolve()
         organize_output = Path(args.organize_output).expanduser().resolve()
@@ -119,7 +139,10 @@ def main() -> None:
     if args.mode == "video":
         _run_video_workflow(args, folder)
         return
-    raise SystemExit("Mode must be 'photo' or 'video'. Use --organize-mode copy|move with --decisions for organization.")
+    raise SystemExit(
+        "Mode must be 'photo', 'video', or 'video-organize'. "
+        "Use --organize-mode copy|move with --decisions for photo organization."
+    )
 
 
 def _resolve_organize_mode(args: argparse.Namespace) -> str:
@@ -170,6 +193,20 @@ def _run_photo_workflow(args: argparse.Namespace, folder: Path) -> None:
     print(f"CSV written to: {output}")
     print(f"Thumbnails written to: {thumbnail_dir}")
     print(f"HTML report written to: {report_path}")
+
+
+def _run_video_organize_workflow(args: argparse.Namespace) -> None:
+    from media_agent.video.organize import organize_videos_from_decisions
+
+    if not args.video_decisions:
+        raise SystemExit("--video-decisions is required when --mode video-organize is used.")
+
+    decisions_path = Path(args.video_decisions).expanduser().resolve()
+    organize_output = Path(args.video_organize_output).expanduser().resolve()
+    log_path = organize_videos_from_decisions(decisions_path, organize_output, mode=args.mode_action)
+    print(f"Video decisions read from: {decisions_path}")
+    print(f"Organized videos written to: {organize_output}")
+    print(f"Video organize log written to: {log_path}")
 
 
 def _run_video_workflow(args: argparse.Namespace, folder: Path) -> None:

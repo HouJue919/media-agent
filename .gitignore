@@ -7,10 +7,13 @@ __pycache__/
 *.html
 media_index.csv
 video_index.csv
+video_decisions.csv
+video_organize_log.csv
 report.html
 report_*.html
 decisions.csv
 organized_media/
+organized_videos/
 thumbnails/
 video_keyframes/
 demo_videos/
