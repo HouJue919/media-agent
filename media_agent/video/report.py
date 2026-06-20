@@ -23,12 +23,27 @@ TRANSLATIONS = {
         "summary": "共 {count} 个视频，基于关键帧质量分析生成。",
         "dashboard_label": "视频统计摘要",
         "total_videos": "总视频数量",
+        "total_duration": "总视频时长",
         "keep_count": "推荐保留",
         "review_count": "推荐复查",
         "reject_count": "删除候选",
         "average_duration": "平均时长",
+        "shortest_duration": "最短时长",
+        "longest_duration": "最长时长",
+        "average_keyframes": "平均关键帧数",
+        "recommendation_distribution": "推荐分布",
+        "stability_distribution": "稳定性分布",
+        "technical_summary": "技术规格统计",
+        "quality_summary": "质量统计",
+        "most_common_resolution": "最常见分辨率",
+        "most_common_fps": "最常见帧率",
+        "most_common_codec": "最常见编码",
         "average_blur": "平均清晰度",
         "average_exposure": "平均曝光",
+        "average_stability": "平均稳定性",
+        "worst_blur_video": "最模糊视频",
+        "worst_exposure_video": "曝光最差视频",
+        "shakiest_video": "最抖视频",
         "total_keyframes": "关键帧总数",
         "generated_at": "报告生成时间",
         "review_tools": "视频复查工具",
@@ -69,12 +84,27 @@ TRANSLATIONS = {
         "summary": "{count} videos analyzed with keyframe quality scoring.",
         "dashboard_label": "Video Summary Dashboard",
         "total_videos": "Total Videos",
+        "total_duration": "Total Duration",
         "keep_count": "Keep",
         "review_count": "Review",
         "reject_count": "Reject Candidates",
         "average_duration": "Average Duration",
+        "shortest_duration": "Shortest Duration",
+        "longest_duration": "Longest Duration",
+        "average_keyframes": "Average Keyframes per Video",
+        "recommendation_distribution": "Recommendation Distribution",
+        "stability_distribution": "Stability Distribution",
+        "technical_summary": "Technical Summary",
+        "quality_summary": "Quality Summary",
+        "most_common_resolution": "Most Common Resolution",
+        "most_common_fps": "Most Common FPS",
+        "most_common_codec": "Most Common Codec",
         "average_blur": "Average Blur Score",
         "average_exposure": "Average Exposure Score",
+        "average_stability": "Average Stability Score",
+        "worst_blur_video": "Worst Blur Video",
+        "worst_exposure_video": "Worst Exposure Video",
+        "shakiest_video": "Shakiest Video",
         "total_keyframes": "Total Keyframes",
         "generated_at": "Report Generated At",
         "review_tools": "Video Review Tools",
@@ -137,19 +167,34 @@ def _sort_key(record: dict[str, Any]) -> tuple[int, float, float, str]:
 
 def _build_dashboard(records: list[dict[str, Any]]) -> dict[str, Any]:
     counts = Counter(str(record.get("video_quality_recommendation") or "") for record in records)
+    stability_counts = Counter(str(record.get("stability_recommendation") or "") for record in records)
+    durations = [_number_or_none(record.get("duration_seconds")) for record in records]
+    durations = [duration for duration in durations if duration is not None]
+    total_keyframes = sum(_int_or_default(record.get("frame_count"), 0) for record in records)
     return {
         "total": len(records),
         "counts": counts,
+        "stability_counts": stability_counts,
+        "total_duration": sum(durations) if durations else None,
         "average_duration": _average(record.get("duration_seconds") for record in records),
+        "shortest_duration": min(durations) if durations else None,
+        "longest_duration": max(durations) if durations else None,
+        "average_keyframes": (total_keyframes / len(records)) if records else None,
         "average_blur_score": _average(record.get("avg_blur_score") for record in records),
         "average_exposure_score": _average(record.get("avg_exposure_score") for record in records),
-        "total_keyframes": sum(_int_or_default(record.get("frame_count"), 0) for record in records),
+        "average_stability_score": _average(record.get("stability_score") for record in records),
+        "total_keyframes": total_keyframes,
+        "most_common_resolution": _most_common(_resolution_value(record) for record in records),
+        "most_common_fps": _most_common(_fps_value(record) for record in records),
+        "most_common_codec": _most_common(str(record.get("codec") or "").strip() for record in records),
+        "worst_blur_video": _filename_for_lowest(records, "avg_blur_score"),
+        "worst_exposure_video": _filename_for_lowest(records, "avg_exposure_score"),
+        "shakiest_video": _filename_for_lowest(records, "stability_score"),
         "generated_at": datetime.now().isoformat(timespec="seconds"),
     }
 
 
 def _render_page(rows: str, count: int, dashboard: dict[str, Any], t: dict[str, str]) -> str:
-    counts = dashboard["counts"]
     summary_cards = _render_dashboard_cards(dashboard, t)
     return f"""<!doctype html>
 <html lang="{t["html_lang"]}">
@@ -202,6 +247,14 @@ def _render_page(rows: str, count: int, dashboard: dict[str, Any], t: dict[str, 
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
       gap: 10px;
+    }}
+    .dashboard-section-title {{
+      grid-column: 1 / -1;
+      margin-top: 8px;
+      color: #334155;
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
     }}
     .dashboard-card {{
       padding: 12px;
@@ -547,20 +600,71 @@ def _render_page(rows: str, count: int, dashboard: dict[str, Any], t: dict[str, 
 
 def _render_dashboard_cards(dashboard: dict[str, Any], t: dict[str, str]) -> str:
     counts = dashboard["counts"]
-    cards = [
-        (t["total_videos"], dashboard["total"]),
-        (t["keep_count"], counts.get("keep", 0)),
-        (t["review_count"], counts.get("review", 0)),
-        (t["reject_count"], counts.get("reject_candidate", 0)),
-        (t["average_duration"], _format_duration(dashboard["average_duration"])),
-        (t["average_blur"], _format_number(dashboard["average_blur_score"])),
-        (t["average_exposure"], _format_number(dashboard["average_exposure_score"])),
-        (t["total_keyframes"], dashboard["total_keyframes"]),
-        (t["generated_at"], dashboard["generated_at"]),
+    stability_counts = dashboard["stability_counts"]
+    total = int(dashboard["total"])
+    sections = [
+        (
+            None,
+            [
+                (t["total_videos"], total),
+                (t["total_duration"], _format_duration(dashboard["total_duration"])),
+                (t["average_duration"], _format_duration(dashboard["average_duration"])),
+                (t["shortest_duration"], _format_duration(dashboard["shortest_duration"])),
+                (t["longest_duration"], _format_duration(dashboard["longest_duration"])),
+                (t["total_keyframes"], dashboard["total_keyframes"]),
+                (t["average_keyframes"], _format_number(dashboard["average_keyframes"])),
+                (t["generated_at"], dashboard["generated_at"]),
+            ],
+        ),
+        (
+            t["recommendation_distribution"],
+            [
+                (t["keep_count"], _format_count_percentage(counts.get("keep", 0), total)),
+                (t["review_count"], _format_count_percentage(counts.get("review", 0), total)),
+                (t["reject_count"], _format_count_percentage(counts.get("reject_candidate", 0), total)),
+            ],
+        ),
+        (
+            t["stability_distribution"],
+            [
+                (t["stable"], _format_count_percentage(stability_counts.get("stable", 0), total)),
+                (t["moderate"], _format_count_percentage(stability_counts.get("moderate", 0), total)),
+                (t["shaky"], _format_count_percentage(stability_counts.get("shaky", 0), total)),
+            ],
+        ),
+        (
+            t["technical_summary"],
+            [
+                (t["most_common_resolution"], dashboard["most_common_resolution"]),
+                (t["most_common_fps"], dashboard["most_common_fps"]),
+                (t["most_common_codec"], dashboard["most_common_codec"]),
+            ],
+        ),
+        (
+            t["quality_summary"],
+            [
+                (t["average_blur"], _format_number(dashboard["average_blur_score"])),
+                (t["average_exposure"], _format_number(dashboard["average_exposure_score"])),
+                (t["average_stability"], _format_number(dashboard["average_stability_score"])),
+                (t["worst_blur_video"], dashboard["worst_blur_video"]),
+                (t["worst_exposure_video"], dashboard["worst_exposure_video"]),
+                (t["shakiest_video"], dashboard["shakiest_video"]),
+            ],
+        ),
     ]
-    return "\n".join(
-        f"""<div class="dashboard-card"><span class="dashboard-label">{escape(str(label))}</span><span class="dashboard-value">{escape(str(value))}</span></div>"""
-        for label, value in cards
+    parts = []
+    for title, cards in sections:
+        if title:
+            parts.append(f'<div class="dashboard-section-title">{escape(str(title))}</div>')
+        for label, value in cards:
+            parts.append(_render_dashboard_card(label, value))
+    return "\n".join(parts)
+
+
+def _render_dashboard_card(label: Any, value: Any) -> str:
+    return (
+        f"""<div class="dashboard-card"><span class="dashboard-label">{escape(str(label))}</span>"""
+        f"""<span class="dashboard-value">{escape(str(value if value not in (None, "") else ""))}</span></div>"""
     )
 
 
@@ -619,6 +723,48 @@ def _render_decision_controls(t: dict[str, str]) -> str:
               <button class="decision-button" type="button" data-decision="review">{t["review"]}</button>
               <button class="decision-button" type="button" data-decision="reject">{t["reject"]}</button>
             </div>"""
+
+
+def _format_count_percentage(count: Any, total: int) -> str:
+    parsed_count = _int_or_default(count, 0)
+    if total <= 0:
+        return f"{parsed_count} (0%)"
+    return f"{parsed_count} ({_format_percent(parsed_count / total * 100)})"
+
+
+def _format_percent(value: float) -> str:
+    return f"{value:.1f}%".replace(".0%", "%")
+
+
+def _most_common(values: Any) -> str:
+    cleaned = [str(value).strip() for value in values if str(value or "").strip()]
+    if not cleaned:
+        return ""
+    return Counter(cleaned).most_common(1)[0][0]
+
+
+def _resolution_value(record: dict[str, Any]) -> str:
+    width = record.get("width")
+    height = record.get("height")
+    if width in (None, "") or height in (None, ""):
+        return ""
+    return f"{width} x {height}"
+
+
+def _fps_value(record: dict[str, Any]) -> str:
+    return _format_number(record.get("fps"))
+
+
+def _filename_for_lowest(records: list[dict[str, Any]], field: str) -> str:
+    candidates = []
+    for record in records:
+        value = _number_or_none(record.get(field))
+        filename = str(record.get("filename") or "")
+        if value is not None and filename:
+            candidates.append((value, filename))
+    if not candidates:
+        return ""
+    return min(candidates, key=lambda item: (item[0], item[1].lower()))[1]
 
 
 def _average(values: Any) -> float | None:
