@@ -20,8 +20,11 @@ def test_video_report_includes_review_controls_search_filter_and_export(tmp_path
             "fps": 29.97,
             "codec": "h264",
             "keyframe_paths": [str(keyframe)],
+            "frame_count": 1,
             "avg_blur_score": 320.0,
             "avg_exposure_score": 92.0,
+            "overexposed_frame_count": 0,
+            "underexposed_frame_count": 0,
             "stability_score": 88.0,
             "avg_motion": 2.5,
             "max_motion": 4.2,
@@ -37,18 +40,37 @@ def test_video_report_includes_review_controls_search_filter_and_export(tmp_path
     html = report_path.read_text(encoding="utf-8")
     assert 'id="video-search"' in html
     assert 'id="recommendation-filter"' in html
+    assert 'id="priority-filter"' in html
+    assert 'id="sort-by"' in html
     assert 'id="export-video-decisions"' in html
     assert 'data-decision="keep"' in html
     assert 'data-decision="review"' in html
     assert 'data-decision="reject"' in html
     assert 'data-video-quality-recommendation="keep"' in html
     assert 'data-file-path="/media/demo_video.mp4"' in html
+    assert 'data-duration-seconds="3.2"' in html
+    assert 'data-avg-blur-score="320.0"' in html
+    assert 'data-avg-exposure-score="92.0"' in html
+    assert 'data-stability-score="88.0"' in html
+    assert 'data-shaky-frame-count="0"' in html
+    assert 'data-frame-count="1"' in html
+    assert 'data-stability-recommendation="stable"' in html
+    assert 'data-overexposed-frame-count="0"' in html
+    assert 'data-underexposed-frame-count="0"' in html
+    assert 'data-low-sharpness="false"' in html
     assert "media_agent_video_user_decisions_v1" in html
     assert "localStorage.setItem" in html
     assert "video_decisions.csv" in html
     assert '"video_quality_recommendation"' in html
     assert "filename.includes(query)" in html
     assert "recommendation-filter" in html
+    assert "priority-filter" in html
+    assert "sort-by" in html
+    assert "function sortRows()" in html
+    assert "function matchesPriority" in html
+    assert 'selectedSort === "duration-longest"' in html
+    assert 'selectedPriority === "low-sharpness"' in html
+    assert 'selectedPriority === "long-videos"' in html
     assert "video_keyframes/demo/frame_001.jpg" in html
     assert "Stability Score" in html
     assert "Avg Motion" in html
@@ -67,6 +89,14 @@ def test_video_report_includes_review_controls_search_filter_and_export(tmp_path
     assert "抖动帧数" in zh_html
     assert "稳定性建议" in zh_html
     assert ">稳定<" in zh_html
+    assert "排序" in zh_html
+    assert "优先复查" in zh_html
+    assert "需要复查" in zh_html
+    assert "疑似废片" in zh_html
+    assert "抖动视频" in zh_html
+    assert "清晰度较低" in zh_html
+    assert "曝光问题" in zh_html
+    assert "长视频" in zh_html
 
 
 def test_video_report_dashboard_includes_dataset_summary_and_percentages(tmp_path: Path) -> None:

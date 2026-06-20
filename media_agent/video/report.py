@@ -13,6 +13,7 @@ RECOMMENDATION_ORDER = {
     "review": 1,
     "keep": 2,
 }
+LOW_SHARPNESS_THRESHOLD = 80.0
 
 
 TRANSLATIONS = {
@@ -51,6 +52,24 @@ TRANSLATIONS = {
         "search_placeholder": "按文件名搜索",
         "filter_recommendation": "筛选建议",
         "all_recommendations": "全部建议",
+        "sort_by": "排序",
+        "sort_default": "默认",
+        "sort_recommendation": "系统建议",
+        "sort_duration_longest": "时长最长",
+        "sort_duration_shortest": "时长最短",
+        "sort_blur_worst": "清晰度最差",
+        "sort_exposure_worst": "曝光最差",
+        "sort_stability_worst": "稳定性最差",
+        "sort_shaky_frames": "抖动帧数",
+        "sort_keyframes": "关键帧数量",
+        "priority_review": "优先复查",
+        "priority_all": "全部",
+        "priority_needs_review": "需要复查",
+        "priority_likely_reject": "疑似废片",
+        "priority_shaky": "抖动视频",
+        "priority_low_sharpness": "清晰度较低",
+        "priority_exposure": "曝光问题",
+        "priority_long": "长视频",
         "export_decisions": "导出视频人工选择结果",
         "filename": "视频文件名",
         "duration": "时长",
@@ -112,6 +131,24 @@ TRANSLATIONS = {
         "search_placeholder": "Search by filename",
         "filter_recommendation": "Filter Recommendation",
         "all_recommendations": "All Recommendations",
+        "sort_by": "Sort By",
+        "sort_default": "Default",
+        "sort_recommendation": "Recommendation",
+        "sort_duration_longest": "Duration Longest",
+        "sort_duration_shortest": "Duration Shortest",
+        "sort_blur_worst": "Blur Score Worst",
+        "sort_exposure_worst": "Exposure Score Worst",
+        "sort_stability_worst": "Stability Score Worst",
+        "sort_shaky_frames": "Shaky Frame Count",
+        "sort_keyframes": "Keyframe Count",
+        "priority_review": "Priority Review",
+        "priority_all": "All",
+        "priority_needs_review": "Needs Review",
+        "priority_likely_reject": "Likely Reject",
+        "priority_shaky": "Shaky Videos",
+        "priority_low_sharpness": "Low Sharpness",
+        "priority_exposure": "Exposure Problems",
+        "priority_long": "Long Videos",
         "export_decisions": "Export Video Decisions",
         "filename": "Video Filename",
         "duration": "Duration",
@@ -149,7 +186,7 @@ def export_video_html_report(records: list[dict[str, Any]], output_path: Path, l
     t = _translations(language)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     dashboard = _build_dashboard(records)
-    rows = "\n".join(_render_row(record, output_path.parent, t) for record in records)
+    rows = "\n".join(_render_row(record, output_path.parent, t, index) for index, record in enumerate(records))
     output_path.write_text(_render_page(rows, len(records), dashboard, t), encoding="utf-8")
 
 
@@ -471,6 +508,32 @@ def _render_page(rows: str, count: int, dashboard: dict[str, Any], t: dict[str, 
           <option value="reject_candidate">{t["reject_candidate"]}</option>
         </select>
       </div>
+      <div class="tool-group">
+        <label class="tool-label" for="priority-filter">{t["priority_review"]}</label>
+        <select class="tool-select" id="priority-filter">
+          <option value="all">{t["priority_all"]}</option>
+          <option value="needs-review">{t["priority_needs_review"]}</option>
+          <option value="likely-reject">{t["priority_likely_reject"]}</option>
+          <option value="shaky-videos">{t["priority_shaky"]}</option>
+          <option value="low-sharpness">{t["priority_low_sharpness"]}</option>
+          <option value="exposure-problems">{t["priority_exposure"]}</option>
+          <option value="long-videos">{t["priority_long"]}</option>
+        </select>
+      </div>
+      <div class="tool-group">
+        <label class="tool-label" for="sort-by">{t["sort_by"]}</label>
+        <select class="tool-select" id="sort-by">
+          <option value="default">{t["sort_default"]}</option>
+          <option value="recommendation">{t["sort_recommendation"]}</option>
+          <option value="duration-longest">{t["sort_duration_longest"]}</option>
+          <option value="duration-shortest">{t["sort_duration_shortest"]}</option>
+          <option value="blur-worst">{t["sort_blur_worst"]}</option>
+          <option value="exposure-worst">{t["sort_exposure_worst"]}</option>
+          <option value="stability-worst">{t["sort_stability_worst"]}</option>
+          <option value="shaky-frames">{t["sort_shaky_frames"]}</option>
+          <option value="keyframes">{t["sort_keyframes"]}</option>
+        </select>
+      </div>
     </div>
     <button class="export-button" id="export-video-decisions" type="button">{t["export_decisions"]}</button>
   </section>
@@ -507,9 +570,15 @@ def _render_page(rows: str, count: int, dashboard: dict[str, Any], t: dict[str, 
     (() => {{
       const storageKey = "media_agent_video_user_decisions_v1";
       const rows = Array.from(document.querySelectorAll("tbody tr[data-file-path]"));
+      const tbody = document.querySelector("tbody");
       const exportButton = document.getElementById("export-video-decisions");
       const searchInput = document.getElementById("video-search");
       const recommendationFilter = document.getElementById("recommendation-filter");
+      const priorityFilter = document.getElementById("priority-filter");
+      const sortSelect = document.getElementById("sort-by");
+      const recommendationOrder = {{ "reject_candidate": 0, "review": 1, "keep": 2 }};
+      const lowSharpnessThreshold = {LOW_SHARPNESS_THRESHOLD};
+      const averageDuration = average(rows.map((row) => numberValue(row.dataset.durationSeconds)));
 
       function loadDecisions() {{
         try {{
@@ -562,16 +631,121 @@ def _render_page(rows: str, count: int, dashboard: dict[str, Any], t: dict[str, 
         URL.revokeObjectURL(url);
       }}
 
+      function numberValue(value) {{
+        const parsed = Number.parseFloat(value);
+        return Number.isFinite(parsed) ? parsed : null;
+      }}
+
+      function average(values) {{
+        const valid = values.filter((value) => value !== null);
+        if (!valid.length) {{
+          return null;
+        }}
+        return valid.reduce((sum, value) => sum + value, 0) / valid.length;
+      }}
+
+      function originalIndex(row) {{
+        return Number.parseInt(row.dataset.originalIndex || "0", 10);
+      }}
+
+      function compareNumeric(a, b, datasetKey, direction = "asc") {{
+        const aValue = numberValue(a.dataset[datasetKey]);
+        const bValue = numberValue(b.dataset[datasetKey]);
+        if (aValue === null && bValue === null) {{
+          return originalIndex(a) - originalIndex(b);
+        }}
+        if (aValue === null) {{
+          return 1;
+        }}
+        if (bValue === null) {{
+          return -1;
+        }}
+        const comparison = aValue - bValue;
+        return direction === "desc" ? -comparison : comparison;
+      }}
+
+      function compareRecommendation(a, b) {{
+        const aValue = recommendationOrder[a.dataset.videoQualityRecommendation || ""] ?? 1;
+        const bValue = recommendationOrder[b.dataset.videoQualityRecommendation || ""] ?? 1;
+        if (aValue !== bValue) {{
+          return aValue - bValue;
+        }}
+        return originalIndex(a) - originalIndex(b);
+      }}
+
+      function sortRows() {{
+        const selectedSort = sortSelect.value || "default";
+        const sortedRows = [...rows].sort((a, b) => {{
+          let comparison = 0;
+          if (selectedSort === "recommendation") {{
+            comparison = compareRecommendation(a, b);
+          }} else if (selectedSort === "duration-longest") {{
+            comparison = compareNumeric(a, b, "durationSeconds", "desc");
+          }} else if (selectedSort === "duration-shortest") {{
+            comparison = compareNumeric(a, b, "durationSeconds", "asc");
+          }} else if (selectedSort === "blur-worst") {{
+            comparison = compareNumeric(a, b, "avgBlurScore", "asc");
+          }} else if (selectedSort === "exposure-worst") {{
+            comparison = compareNumeric(a, b, "avgExposureScore", "asc");
+          }} else if (selectedSort === "stability-worst") {{
+            comparison = compareNumeric(a, b, "stabilityScore", "asc");
+          }} else if (selectedSort === "shaky-frames") {{
+            comparison = compareNumeric(a, b, "shakyFrameCount", "desc");
+          }} else if (selectedSort === "keyframes") {{
+            comparison = compareNumeric(a, b, "frameCount", "desc");
+          }} else {{
+            comparison = originalIndex(a) - originalIndex(b);
+          }}
+          return comparison || originalIndex(a) - originalIndex(b);
+        }});
+        sortedRows.forEach((row) => tbody.appendChild(row));
+      }}
+
+      function matchesPriority(row, selectedPriority) {{
+        const recommendation = row.dataset.videoQualityRecommendation || "";
+        const stability = row.dataset.stabilityRecommendation || "";
+        const duration = numberValue(row.dataset.durationSeconds);
+        const overexposedCount = numberValue(row.dataset.overexposedFrameCount) || 0;
+        const underexposedCount = numberValue(row.dataset.underexposedFrameCount) || 0;
+        const blurScore = numberValue(row.dataset.avgBlurScore);
+        if (selectedPriority === "needs-review") {{
+          return recommendation === "review";
+        }}
+        if (selectedPriority === "likely-reject") {{
+          return recommendation === "reject_candidate";
+        }}
+        if (selectedPriority === "shaky-videos") {{
+          return stability === "shaky";
+        }}
+        if (selectedPriority === "low-sharpness") {{
+          return row.dataset.lowSharpness === "true" || (blurScore !== null && blurScore < lowSharpnessThreshold);
+        }}
+        if (selectedPriority === "exposure-problems") {{
+          return overexposedCount > 0 || underexposedCount > 0;
+        }}
+        if (selectedPriority === "long-videos") {{
+          return averageDuration !== null && duration !== null && duration > averageDuration;
+        }}
+        return true;
+      }}
+
       function applyFilters() {{
         const query = (searchInput.value || "").trim().toLowerCase();
         const selectedRecommendation = recommendationFilter.value || "all";
+        const selectedPriority = priorityFilter.value || "all";
         rows.forEach((row) => {{
           const filename = (row.dataset.filename || "").toLowerCase();
           const recommendation = row.dataset.videoQualityRecommendation || "";
           const matchesSearch = !query || filename.includes(query);
           const matchesRecommendation = selectedRecommendation === "all" || recommendation === selectedRecommendation;
-          row.hidden = !(matchesSearch && matchesRecommendation);
+          const matchesPriorityFilter = matchesPriority(row, selectedPriority);
+          row.hidden = !(matchesSearch && matchesRecommendation && matchesPriorityFilter);
         }});
+      }}
+
+      function updateReport() {{
+        sortRows();
+        applyFilters();
       }}
 
       const decisions = loadDecisions();
@@ -587,10 +761,12 @@ def _render_page(rows: str, count: int, dashboard: dict[str, Any], t: dict[str, 
         }});
       }});
 
-      searchInput.addEventListener("input", applyFilters);
-      recommendationFilter.addEventListener("change", applyFilters);
+      searchInput.addEventListener("input", updateReport);
+      recommendationFilter.addEventListener("change", updateReport);
+      priorityFilter.addEventListener("change", updateReport);
+      sortSelect.addEventListener("change", updateReport);
       exportButton.addEventListener("click", () => exportDecisions(decisions));
-      applyFilters();
+      updateReport();
     }})();
   </script>
 </body>
@@ -668,7 +844,13 @@ def _render_dashboard_card(label: Any, value: Any) -> str:
     )
 
 
-def _render_row(record: dict[str, Any], report_dir: Path, t: dict[str, str]) -> str:
+def _data_attribute(value: Any) -> str:
+    if value in (None, ""):
+        return ""
+    return escape(str(value), quote=True)
+
+
+def _render_row(record: dict[str, Any], report_dir: Path, t: dict[str, str], original_index: int) -> str:
     recommendation = str(record.get("video_quality_recommendation") or "")
     badge_class = _badge_class(recommendation)
     width = record.get("width") or ""
@@ -677,7 +859,9 @@ def _render_row(record: dict[str, Any], report_dir: Path, t: dict[str, str]) -> 
     file_path = escape(str(record.get("file_path") or ""), quote=True)
     filename_value = escape(str(record.get("filename") or ""), quote=True)
     recommendation_value = escape(recommendation, quote=True)
-    return f"""<tr data-file-path="{file_path}" data-filename="{filename_value}" data-video-quality-recommendation="{recommendation_value}">
+    stability_value = escape(str(record.get("stability_recommendation") or ""), quote=True)
+    low_sharpness = _number_or_default(record.get("avg_blur_score"), float("inf")) < LOW_SHARPNESS_THRESHOLD
+    return f"""<tr data-file-path="{file_path}" data-filename="{filename_value}" data-video-quality-recommendation="{recommendation_value}" data-original-index="{original_index}" data-duration-seconds="{_data_attribute(record.get("duration_seconds"))}" data-avg-blur-score="{_data_attribute(record.get("avg_blur_score"))}" data-avg-exposure-score="{_data_attribute(record.get("avg_exposure_score"))}" data-stability-score="{_data_attribute(record.get("stability_score"))}" data-shaky-frame-count="{_data_attribute(record.get("shaky_frame_count"))}" data-frame-count="{_data_attribute(record.get("frame_count"))}" data-stability-recommendation="{stability_value}" data-overexposed-frame-count="{_data_attribute(record.get("overexposed_frame_count"))}" data-underexposed-frame-count="{_data_attribute(record.get("underexposed_frame_count"))}" data-low-sharpness="{str(low_sharpness).lower()}">
   <td class="filename" title="{escape(str(record.get("file_path") or ""))}">{escape(str(record.get("filename") or ""))}</td>
   <td>{escape(_format_duration(record.get("duration_seconds")))}</td>
   <td>{escape(resolution)}</td>

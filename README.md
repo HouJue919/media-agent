@@ -6,7 +6,7 @@ AI-assisted visual asset management for photographers and content creators.
 
 Current release: v0.1.0 Portfolio Release
 
-Current development milestone: v0.2.5 Video Dataset Summary Dashboard
+Current development milestone: v0.2.6 Video Report Sorting & Priority Review
 
 Media Agent is a local-first Python project for reviewing, organizing, and documenting large photo and video libraries. It scans folders of media files, extracts metadata and EXIF data, evaluates basic visual quality, detects duplicate or similar photos, recommends the best image in each duplicate group, and generates both CSV and interactive HTML reports.
 
@@ -28,7 +28,7 @@ Modern photo libraries often contain hundreds or thousands of images from camera
 - Let the user make final decisions in an HTML report.
 - Safely organize selected files without deleting originals.
 
-The current development milestone is **v0.2.5 Video Dataset Summary Dashboard**.
+The current development milestone is **v0.2.6 Video Report Sorting & Priority Review**.
 
 ## Screenshots
 
@@ -314,6 +314,7 @@ The video workflow:
 - Stores video decisions in browser `localStorage`.
 - Exports `video_decisions.csv` with `file_path`, `video_quality_recommendation`, and `user_decision`.
 - Provides filename search and recommendation filtering in the video report.
+- Provides browser-side sorting and priority review filters for faster video triage.
 - Safely organizes reviewed videos into keep, review, and reject folders without deleting originals.
 
 Video support is based on keyframe extraction. The system does not analyze full video semantics yet. Future versions may add scene recognition, shot detection, stabilization improvement suggestions, and natural language search.
@@ -492,6 +493,13 @@ Video support is based on keyframe extraction. The system does not analyze full 
 - Added most common resolution, FPS, and codec.
 - Added average quality metrics and worst-case video filename highlights.
 - Preserved the existing video search, filtering, manual decision buttons, localStorage, and `video_decisions.csv` export.
+
+### v0.2.6 - Video Report Sorting & Priority Review
+
+- Added browser-side Sort By controls to `video_report.html`.
+- Added Priority Review filters for review candidates, likely rejects, shaky videos, low sharpness, exposure problems, and long videos.
+- Combined search, recommendation filtering, priority filtering, and sorting in the same report view.
+- Kept manual video decisions, localStorage persistence, and `video_decisions.csv` export unchanged.
 
 ## Installation
 
