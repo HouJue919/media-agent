@@ -46,8 +46,33 @@ def extract_keyframes(
         message = completed.stderr.strip() or "unknown ffmpeg error"
         raise RuntimeError(f"ffmpeg failed for {video_path}: {message}")
 
-    return [
+    frame_paths = [
         output_dir / f"frame_{index:03d}.jpg"
         for index in range(1, max_frames + 1)
         if (output_dir / f"frame_{index:03d}.jpg").exists()
     ]
+    if not frame_paths:
+        _extract_first_frame(video_path, output_dir / "frame_001.jpg")
+        frame_paths = [output_dir / "frame_001.jpg"] if (output_dir / "frame_001.jpg").exists() else []
+    return frame_paths
+
+
+def _extract_first_frame(video_path: Path, output_path: Path) -> None:
+    command = [
+        "ffmpeg",
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-y",
+        "-i",
+        str(video_path),
+        "-frames:v",
+        "1",
+        "-q:v",
+        "2",
+        str(output_path),
+    ]
+    completed = subprocess.run(command, capture_output=True, text=True, check=False)
+    if completed.returncode != 0:
+        message = completed.stderr.strip() or "unknown ffmpeg error"
+        raise RuntimeError(f"ffmpeg fallback failed for {video_path}: {message}")
