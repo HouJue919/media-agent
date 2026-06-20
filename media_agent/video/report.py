@@ -31,6 +31,12 @@ TRANSLATIONS = {
         "average_exposure": "平均曝光",
         "total_keyframes": "关键帧总数",
         "generated_at": "报告生成时间",
+        "review_tools": "视频复查工具",
+        "search": "搜索",
+        "search_placeholder": "按文件名搜索",
+        "filter_recommendation": "筛选建议",
+        "all_recommendations": "全部建议",
+        "export_decisions": "导出视频人工选择结果",
         "filename": "视频文件名",
         "duration": "时长",
         "resolution": "分辨率",
@@ -41,9 +47,11 @@ TRANSLATIONS = {
         "avg_exposure": "平均曝光",
         "recommendation": "系统建议",
         "reason": "推荐原因",
+        "user_decision": "人工决定",
         "no_keyframes": "无关键帧",
         "keep": "保留",
         "review": "复查",
+        "reject": "剔除",
         "reject_candidate": "删除候选",
     },
     "en": {
@@ -61,6 +69,12 @@ TRANSLATIONS = {
         "average_exposure": "Average Exposure Score",
         "total_keyframes": "Total Keyframes",
         "generated_at": "Report Generated At",
+        "review_tools": "Video Review Tools",
+        "search": "Search",
+        "search_placeholder": "Search by filename",
+        "filter_recommendation": "Filter Recommendation",
+        "all_recommendations": "All Recommendations",
+        "export_decisions": "Export Video Decisions",
         "filename": "Video Filename",
         "duration": "Duration",
         "resolution": "Resolution",
@@ -71,9 +85,11 @@ TRANSLATIONS = {
         "avg_exposure": "Average Exposure",
         "recommendation": "Recommendation",
         "reason": "Recommendation Reason",
+        "user_decision": "User Decision",
         "no_keyframes": "No keyframes",
         "keep": "keep",
         "review": "review",
+        "reject": "reject",
         "reject_candidate": "reject_candidate",
     },
 }
@@ -135,6 +151,7 @@ def _render_page(rows: str, count: int, dashboard: dict[str, Any], t: dict[str, 
       --danger: #b42318;
       --ok: #067647;
       --warning: #b54708;
+      --focus: #2563eb;
     }}
     body {{
       margin: 0;
@@ -186,6 +203,59 @@ def _render_page(rows: str, count: int, dashboard: dict[str, Any], t: dict[str, 
       font-size: 18px;
       font-weight: 700;
     }}
+    .review-tools {{
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 0 28px 18px;
+    }}
+    .tool-controls {{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: flex-end;
+    }}
+    .tool-group {{
+      display: grid;
+      gap: 5px;
+    }}
+    .tool-label {{
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }}
+    .tool-input, .tool-select {{
+      min-height: 38px;
+      min-width: 220px;
+      padding: 0 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: #ffffff;
+      color: var(--text);
+      font: inherit;
+    }}
+    .tool-select {{
+      min-width: 190px;
+    }}
+    .tool-input:focus, .tool-select:focus {{
+      outline: 2px solid var(--focus);
+      outline-offset: 1px;
+    }}
+    .export-button {{
+      min-height: 38px;
+      padding: 0 14px;
+      border: 1px solid #1d4ed8;
+      border-radius: 6px;
+      background: var(--focus);
+      color: #ffffff;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }}
+    .export-button:hover {{
+      background: #1d4ed8;
+    }}
     main {{
       padding: 0 28px 32px;
     }}
@@ -197,7 +267,7 @@ def _render_page(rows: str, count: int, dashboard: dict[str, Any], t: dict[str, 
     }}
     table {{
       width: 100%;
-      min-width: 1220px;
+      min-width: 1440px;
       border-collapse: collapse;
     }}
     th, td {{
@@ -255,6 +325,54 @@ def _render_page(rows: str, count: int, dashboard: dict[str, Any], t: dict[str, 
       background: #fef0c7;
       color: var(--warning);
     }}
+    .empty {{
+      color: var(--muted);
+    }}
+    .decision-buttons {{
+      display: inline-grid;
+      grid-template-columns: repeat(3, minmax(58px, 1fr));
+      gap: 4px;
+      width: 210px;
+    }}
+    .decision-button {{
+      min-height: 30px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: #ffffff;
+      color: var(--text);
+      cursor: pointer;
+      font-weight: 700;
+    }}
+    .decision-button:hover {{
+      border-color: var(--focus);
+    }}
+    .decision-button.active[data-decision="keep"] {{
+      background: #dcfae6;
+      border-color: #75e0a7;
+      color: var(--ok);
+    }}
+    .decision-button.active[data-decision="review"] {{
+      background: #fef0c7;
+      border-color: #fedf89;
+      color: var(--warning);
+    }}
+    .decision-button.active[data-decision="reject"] {{
+      background: #fee4e2;
+      border-color: #fda29b;
+      color: var(--danger);
+    }}
+    @media (max-width: 760px) {{
+      .review-tools {{
+        align-items: stretch;
+        flex-direction: column;
+      }}
+      .tool-input, .tool-select {{
+        min-width: 100%;
+      }}
+      .export-button {{
+        width: 100%;
+      }}
+    }}
   </style>
 </head>
 <body>
@@ -267,6 +385,24 @@ def _render_page(rows: str, count: int, dashboard: dict[str, Any], t: dict[str, 
     <div class="dashboard-grid">
       {summary_cards}
     </div>
+  </section>
+  <section class="review-tools" aria-label="{t["review_tools"]}">
+    <div class="tool-controls">
+      <div class="tool-group">
+        <label class="tool-label" for="video-search">{t["search"]}</label>
+        <input class="tool-input" id="video-search" type="search" placeholder="{t["search_placeholder"]}">
+      </div>
+      <div class="tool-group">
+        <label class="tool-label" for="recommendation-filter">{t["filter_recommendation"]}</label>
+        <select class="tool-select" id="recommendation-filter">
+          <option value="all">{t["all_recommendations"]}</option>
+          <option value="keep">{t["keep"]}</option>
+          <option value="review">{t["review"]}</option>
+          <option value="reject_candidate">{t["reject_candidate"]}</option>
+        </select>
+      </div>
+    </div>
+    <button class="export-button" id="export-video-decisions" type="button">{t["export_decisions"]}</button>
   </section>
   <main>
     <div class="table-wrap">
@@ -283,6 +419,7 @@ def _render_page(rows: str, count: int, dashboard: dict[str, Any], t: dict[str, 
             <th>{t["avg_exposure"]}</th>
             <th>{t["recommendation"]}</th>
             <th>{t["reason"]}</th>
+            <th>{t["user_decision"]}</th>
           </tr>
         </thead>
         <tbody>
@@ -291,6 +428,96 @@ def _render_page(rows: str, count: int, dashboard: dict[str, Any], t: dict[str, 
       </table>
     </div>
   </main>
+  <script>
+    (() => {{
+      const storageKey = "media_agent_video_user_decisions_v1";
+      const rows = Array.from(document.querySelectorAll("tbody tr[data-file-path]"));
+      const exportButton = document.getElementById("export-video-decisions");
+      const searchInput = document.getElementById("video-search");
+      const recommendationFilter = document.getElementById("recommendation-filter");
+
+      function loadDecisions() {{
+        try {{
+          return JSON.parse(localStorage.getItem(storageKey) || "{{}}");
+        }} catch (error) {{
+          return {{}};
+        }}
+      }}
+
+      function saveDecisions(decisions) {{
+        try {{
+          localStorage.setItem(storageKey, JSON.stringify(decisions));
+        }} catch (error) {{
+          return;
+        }}
+      }}
+
+      function setActiveButton(row, decision) {{
+        row.querySelectorAll(".decision-button").forEach((button) => {{
+          button.classList.toggle("active", button.dataset.decision === decision);
+        }});
+      }}
+
+      function csvCell(value) {{
+        const text = String(value ?? "");
+        if (/[",\\n\\r]/.test(text)) {{
+          return `"${{text.replaceAll('"', '""')}}"`;
+        }}
+        return text;
+      }}
+
+      function exportDecisions(decisions) {{
+        const header = ["file_path", "video_quality_recommendation", "user_decision"];
+        const lines = [header.map(csvCell).join(",")];
+        rows.forEach((row) => {{
+          const filePath = row.dataset.filePath || "";
+          const recommendation = row.dataset.videoQualityRecommendation || "";
+          const userDecision = decisions[filePath] || "";
+          lines.push([filePath, recommendation, userDecision].map(csvCell).join(","));
+        }});
+
+        const blob = new Blob([lines.join("\\n") + "\\n"], {{ type: "text/csv;charset=utf-8" }});
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "video_decisions.csv";
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+      }}
+
+      function applyFilters() {{
+        const query = (searchInput.value || "").trim().toLowerCase();
+        const selectedRecommendation = recommendationFilter.value || "all";
+        rows.forEach((row) => {{
+          const filename = (row.dataset.filename || "").toLowerCase();
+          const recommendation = row.dataset.videoQualityRecommendation || "";
+          const matchesSearch = !query || filename.includes(query);
+          const matchesRecommendation = selectedRecommendation === "all" || recommendation === selectedRecommendation;
+          row.hidden = !(matchesSearch && matchesRecommendation);
+        }});
+      }}
+
+      const decisions = loadDecisions();
+      rows.forEach((row) => {{
+        const filePath = row.dataset.filePath || "";
+        setActiveButton(row, decisions[filePath] || "");
+        row.querySelectorAll(".decision-button").forEach((button) => {{
+          button.addEventListener("click", () => {{
+            decisions[filePath] = button.dataset.decision;
+            saveDecisions(decisions);
+            setActiveButton(row, decisions[filePath]);
+          }});
+        }});
+      }});
+
+      searchInput.addEventListener("input", applyFilters);
+      recommendationFilter.addEventListener("change", applyFilters);
+      exportButton.addEventListener("click", () => exportDecisions(decisions));
+      applyFilters();
+    }})();
+  </script>
 </body>
 </html>
 """
@@ -321,7 +548,10 @@ def _render_row(record: dict[str, Any], report_dir: Path, t: dict[str, str]) -> 
     width = record.get("width") or ""
     height = record.get("height") or ""
     resolution = f"{width} x {height}" if width and height else ""
-    return f"""<tr>
+    file_path = escape(str(record.get("file_path") or ""), quote=True)
+    filename_value = escape(str(record.get("filename") or ""), quote=True)
+    recommendation_value = escape(recommendation, quote=True)
+    return f"""<tr data-file-path="{file_path}" data-filename="{filename_value}" data-video-quality-recommendation="{recommendation_value}">
   <td class="filename" title="{escape(str(record.get("file_path") or ""))}">{escape(str(record.get("filename") or ""))}</td>
   <td>{escape(_format_duration(record.get("duration_seconds")))}</td>
   <td>{escape(resolution)}</td>
@@ -332,6 +562,7 @@ def _render_row(record: dict[str, Any], report_dir: Path, t: dict[str, str]) -> 
   <td>{escape(_format_number(record.get("avg_exposure_score")))}</td>
   <td><span class="badge {badge_class}">{escape(t.get(recommendation, recommendation))}</span></td>
   <td>{escape(str(record.get("recommendation_reason") or ""))}</td>
+  <td>{_render_decision_controls(t)}</td>
 </tr>"""
 
 
@@ -353,6 +584,14 @@ def _badge_class(recommendation: str) -> str:
     if recommendation == "reject_candidate":
         return "bad"
     return "warn"
+
+
+def _render_decision_controls(t: dict[str, str]) -> str:
+    return f"""<div class="decision-buttons">
+              <button class="decision-button" type="button" data-decision="keep">{t["keep"]}</button>
+              <button class="decision-button" type="button" data-decision="review">{t["review"]}</button>
+              <button class="decision-button" type="button" data-decision="reject">{t["reject"]}</button>
+            </div>"""
 
 
 def _average(values: Any) -> float | None:
