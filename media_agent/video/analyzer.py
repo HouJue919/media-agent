@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any
 
 from media_agent.quality import analyze_quality
+from media_agent.video.stability import analyze_video_stability
 
 
 SEVERE_BLUR_THRESHOLD = 80.0
@@ -12,11 +13,13 @@ SEVERE_EXPOSURE_SCORE = 45.0
 KEEP_EXPOSURE_THRESHOLD = 85.0
 SEVERE_OVEREXPOSED_RATIO = 0.20
 SEVERE_UNDEREXPOSED_RATIO = 0.30
+SEVERE_STABILITY_SCORE = 35.0
 
 
 def analyze_video_keyframes(frame_paths: list[Path]) -> dict[str, Any]:
     frame_results = [analyze_quality(path) for path in frame_paths]
     frame_count = len(frame_results)
+    stability = analyze_video_stability(frame_paths)
 
     blur_scores = [_number_or_none(result.get("blur_score")) for result in frame_results]
     exposure_scores = [_number_or_none(result.get("exposure_score")) for result in frame_results]
@@ -46,6 +49,7 @@ def analyze_video_keyframes(frame_paths: list[Path]) -> dict[str, Any]:
         "blurry_frame_count": blurry_frame_count,
         "frame_count": frame_count,
     }
+    summary.update(stability)
     recommendation, reason = _recommend_video(summary)
     summary["video_quality_recommendation"] = recommendation
     summary["recommendation_reason"] = reason
@@ -65,11 +69,19 @@ def _recommend_video(summary: dict[str, Any]) -> tuple[str, str]:
     avg_blur = _number_or_default(summary.get("avg_blur_score"), 0.0)
     min_blur = _number_or_default(summary.get("min_blur_score"), 0.0)
     avg_exposure = _number_or_default(summary.get("avg_exposure_score"), 0.0)
+    stability_score = _number_or_default(summary.get("stability_score"), 100.0)
+    stability_recommendation = str(summary.get("stability_recommendation") or "stable")
 
     if issue_count > frame_count / 2 or avg_exposure < SEVERE_EXPOSURE_SCORE:
         return "reject_candidate", "majority keyframes have severe blur or exposure issues"
+    if stability_recommendation == "shaky":
+        if stability_score < SEVERE_STABILITY_SCORE:
+            return "reject_candidate", "severe camera shake detected"
+        return "review", "shaky keyframe motion, review needed"
     if avg_blur >= KEEP_BLUR_THRESHOLD and min_blur >= SEVERE_BLUR_THRESHOLD and avg_exposure >= KEEP_EXPOSURE_THRESHOLD:
-        return "keep", "clear keyframes, good exposure"
+        if stability_recommendation == "stable":
+            return "keep", "clear keyframes, good exposure, stable motion"
+        return "review", "clear keyframes with moderate motion, review needed"
     return "review", "mixed keyframe quality, review needed"
 
 

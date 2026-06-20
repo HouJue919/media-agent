@@ -45,10 +45,18 @@ TRANSLATIONS = {
         "keyframes": "关键帧预览",
         "avg_blur": "平均清晰度",
         "avg_exposure": "平均曝光",
+        "stability_score": "稳定性评分",
+        "avg_motion": "平均运动量",
+        "max_motion": "最大运动量",
+        "shaky_frame_count": "抖动帧数",
+        "stability_recommendation": "稳定性建议",
         "recommendation": "系统建议",
         "reason": "推荐原因",
         "user_decision": "人工决定",
         "no_keyframes": "无关键帧",
+        "stable": "稳定",
+        "moderate": "中等",
+        "shaky": "抖动",
         "keep": "保留",
         "review": "复查",
         "reject": "剔除",
@@ -83,10 +91,18 @@ TRANSLATIONS = {
         "keyframes": "Keyframe Preview",
         "avg_blur": "Average Blur",
         "avg_exposure": "Average Exposure",
+        "stability_score": "Stability Score",
+        "avg_motion": "Avg Motion",
+        "max_motion": "Max Motion",
+        "shaky_frame_count": "Shaky Frame Count",
+        "stability_recommendation": "Stability Recommendation",
         "recommendation": "Recommendation",
         "reason": "Recommendation Reason",
         "user_decision": "User Decision",
         "no_keyframes": "No keyframes",
+        "stable": "stable",
+        "moderate": "moderate",
+        "shaky": "shaky",
         "keep": "keep",
         "review": "review",
         "reject": "reject",
@@ -111,11 +127,12 @@ def _translations(language: str) -> dict[str, str]:
     return TRANSLATIONS.get(language, TRANSLATIONS["zh"])
 
 
-def _sort_key(record: dict[str, Any]) -> tuple[int, float, str]:
+def _sort_key(record: dict[str, Any]) -> tuple[int, float, float, str]:
     recommendation = str(record.get("video_quality_recommendation") or "")
     avg_blur = _number_or_default(record.get("avg_blur_score"), float("inf"))
     filename = str(record.get("filename") or "").lower()
-    return (RECOMMENDATION_ORDER.get(recommendation, 1), avg_blur, filename)
+    stability_score = _number_or_default(record.get("stability_score"), 100.0)
+    return (RECOMMENDATION_ORDER.get(recommendation, 1), stability_score, avg_blur, filename)
 
 
 def _build_dashboard(records: list[dict[str, Any]]) -> dict[str, Any]:
@@ -267,7 +284,7 @@ def _render_page(rows: str, count: int, dashboard: dict[str, Any], t: dict[str, 
     }}
     table {{
       width: 100%;
-      min-width: 1440px;
+      min-width: 1760px;
       border-collapse: collapse;
     }}
     th, td {{
@@ -417,6 +434,11 @@ def _render_page(rows: str, count: int, dashboard: dict[str, Any], t: dict[str, 
             <th>{t["keyframes"]}</th>
             <th>{t["avg_blur"]}</th>
             <th>{t["avg_exposure"]}</th>
+            <th>{t["stability_score"]}</th>
+            <th>{t["avg_motion"]}</th>
+            <th>{t["max_motion"]}</th>
+            <th>{t["shaky_frame_count"]}</th>
+            <th>{t["stability_recommendation"]}</th>
             <th>{t["recommendation"]}</th>
             <th>{t["reason"]}</th>
             <th>{t["user_decision"]}</th>
@@ -560,6 +582,11 @@ def _render_row(record: dict[str, Any], report_dir: Path, t: dict[str, str]) -> 
   <td>{_render_keyframes(record, report_dir, t)}</td>
   <td>{escape(_format_number(record.get("avg_blur_score")))}</td>
   <td>{escape(_format_number(record.get("avg_exposure_score")))}</td>
+  <td>{escape(_format_number(record.get("stability_score")))}</td>
+  <td>{escape(_format_number(record.get("avg_motion")))}</td>
+  <td>{escape(_format_number(record.get("max_motion")))}</td>
+  <td>{escape(str(record.get("shaky_frame_count") if record.get("shaky_frame_count") not in (None, "") else ""))}</td>
+  <td>{escape(t.get(str(record.get("stability_recommendation") or ""), str(record.get("stability_recommendation") or "")))}</td>
   <td><span class="badge {badge_class}">{escape(t.get(recommendation, recommendation))}</span></td>
   <td>{escape(str(record.get("recommendation_reason") or ""))}</td>
   <td>{_render_decision_controls(t)}</td>

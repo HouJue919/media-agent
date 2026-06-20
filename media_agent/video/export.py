@@ -23,6 +23,11 @@ VIDEO_CSV_FIELDS = [
     "overexposed_frame_count",
     "underexposed_frame_count",
     "blurry_frame_count",
+    "stability_score",
+    "avg_motion",
+    "max_motion",
+    "shaky_frame_count",
+    "stability_recommendation",
     "video_quality_recommendation",
     "recommendation_reason",
 ]
