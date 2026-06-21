@@ -4,11 +4,11 @@ AI-assisted visual asset management for photographers and content creators.
 
 [![Media Agent CI](https://github.com/HouJue919/media-agent/actions/workflows/test.yml/badge.svg)](https://github.com/HouJue919/media-agent/actions/workflows/test.yml)
 
-Current release: v0.1.0 Portfolio Release
+Current release: v0.3.0 Creator Workflow Release
 
-Current development milestone: v0.2.8 Memory-Safe Recommendation Logic
+Media Agent is now a photo and video asset management system for creators.
 
-Media Agent is a local-first Python project for reviewing, organizing, and documenting large photo and video libraries. It scans folders of media files, extracts metadata and EXIF data, evaluates basic visual quality, detects duplicate or similar photos, recommends the best image in each duplicate group, and generates both CSV and interactive HTML reports.
+Media Agent is a local-first Python project for reviewing, organizing, and documenting large photo and video libraries. It scans folders of media files, extracts metadata and EXIF/video metadata, evaluates basic visual quality, detects duplicate or similar photos, analyzes video keyframes, protects memory-like photos from over-aggressive rejection, and generates both CSV and interactive HTML reports.
 
 The project is designed as a practical media workflow tool and as a portfolio-ready software project. It focuses on clear data structures, reproducible outputs, safe file handling, and a modular architecture that can later support real AI vision models and video processing.
 
@@ -29,7 +29,7 @@ Modern photo libraries often contain hundreds or thousands of images from camera
 - Let the user make final decisions in an HTML report.
 - Safely organize selected files without deleting originals.
 
-The current development milestone is **v0.2.8 Memory-Safe Recommendation Logic**.
+The current release is **v0.3.0 Creator Workflow Release**.
 
 ## Screenshots
 
@@ -571,6 +571,14 @@ Video support is based on keyframe extraction. The system does not analyze full 
 - Added dashboard statistics for face detections, person signals, and person-signal memory-safe overrides.
 - This is not face recognition and does not identify people.
 
+### v0.3.0 - Creator Workflow Release
+
+- Consolidated the photo and video workflows into a creator-focused release.
+- Included video keyframe analysis, video report review workflow, safe video organization, stability scoring, dataset dashboard, and priority filtering/sorting.
+- Included the local report preview server for safer browser testing of static HTML reports.
+- Included memory-safe recommendation logic and local face/person signal detection for more conservative review recommendations.
+- Kept the project local-first, non-destructive, bilingual, and free of external AI API dependencies.
+
 ## Installation
 
 Clone the repository, enter the project directory, create a virtual environment, and install dependencies:
@@ -880,25 +888,19 @@ The video organization audit log. It records the original path, target path, use
 
 Planned directions include:
 
-- Real AI vision providers:
-  - OpenAI Vision
-  - local CLIP
-  - YOLO
-  - BLIP
+- v0.3.x: Better UI polish, stronger report ergonomics, and a real-world creator case study.
+- v0.4.0: Local CLIP integration and visual semantic search across photo/video assets.
+- v0.5.0: Real AI scene tagging with replaceable providers while keeping the current mock/local architecture available.
 - Advanced video analysis:
-  - scene recognition
   - shot detection
-  - stabilization scoring
-  - video thumbnails
   - scene-level tagging
   - natural language search
 - Configurable thresholds for blur, exposure, duplicate distance, and review logic.
-- Search and filter controls inside the HTML report.
 - Project profiles for different workflows, such as travel, documentary, social media, or archive cleanup.
 - SQLite or lightweight database indexing for larger media collections.
 - Better RAW support and camera-specific metadata handling.
 - Packaging as a simple desktop application for non-technical users.
-- Automated tests for scanning, sorting, duplicate grouping, report generation, and organization.
+- Continued automated test coverage for scanning, sorting, duplicate grouping, report generation, and organization.
 
 ## Example Workflow
 
@@ -916,7 +918,7 @@ python main.py --decisions decisions.csv --organize-output organized_media --org
 
 ## Status
 
-Media Agent is currently a working local prototype at **v0.2.0**. It is ready for small to medium photo review workflows and includes an initial keyframe-based video analysis workflow.
+Media Agent is currently at **v0.3.0 Creator Workflow Release**. It is ready for small to medium creator photo and video review workflows with local-first analysis, static reports, human decisions, and safe organization.
 
 ## License
 
