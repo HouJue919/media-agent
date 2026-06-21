@@ -157,6 +157,7 @@ def _run_photo_workflow(args: argparse.Namespace, folder: Path) -> None:
     from media_agent.ai_tagging.tagger import EMPTY_AI_TAGS, tag_media_item
     from media_agent.best_pick import annotate_best_picks
     from media_agent.export import export_csv
+    from media_agent.memory_safety import apply_memory_safe_recommendations
     from media_agent.metadata import build_media_record
     from media_agent.quality import analyze_quality
     from media_agent.report import export_html_report, sort_records_for_review
@@ -186,6 +187,7 @@ def _run_photo_workflow(args: argparse.Namespace, folder: Path) -> None:
     annotate_best_picks(records)
     for record in records:
         record.update(tag_media_item(record) if args.enable_ai_tags else EMPTY_AI_TAGS)
+    apply_memory_safe_recommendations(records)
     records = sort_records_for_review(records)
     export_csv(records, output)
     export_html_report(records, report_path, language=args.language)

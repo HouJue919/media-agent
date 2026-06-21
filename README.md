@@ -6,7 +6,7 @@ AI-assisted visual asset management for photographers and content creators.
 
 Current release: v0.1.0 Portfolio Release
 
-Current development milestone: v0.2.7 Local Report Preview Server
+Current development milestone: v0.2.8 Memory-Safe Recommendation Logic
 
 Media Agent is a local-first Python project for reviewing, organizing, and documenting large photo and video libraries. It scans folders of media files, extracts metadata and EXIF data, evaluates basic visual quality, detects duplicate or similar photos, recommends the best image in each duplicate group, and generates both CSV and interactive HTML reports.
 
@@ -25,10 +25,11 @@ Modern photo libraries often contain hundreds or thousands of images from camera
 - Detect duplicate or visually similar images with perceptual hashing.
 - Extract video keyframes with `ffmpeg` and score video quality from sampled frames.
 - Recommend keep, review, or reject candidates.
+- Protect potentially meaningful people, selfie, travel, and memory-like photos from over-aggressive rejection.
 - Let the user make final decisions in an HTML report.
 - Safely organize selected files without deleting originals.
 
-The current development milestone is **v0.2.7 Local Report Preview Server**.
+The current development milestone is **v0.2.8 Memory-Safe Recommendation Logic**.
 
 ## Screenshots
 
@@ -184,8 +185,13 @@ Generated fields:
 
 - `group_best_pick`
 - `group_rank`
+- `technical_recommendation`
+- `final_recommendation`
 - `keep_recommendation`
 - `recommendation_reason`
+- `memory_risk`
+- `memory_risk_reason`
+- `content_safety_override`
 
 Only one photo in each duplicate group can be marked as `group_best_pick=True`.
 
@@ -203,6 +209,22 @@ Every photo receives a short explanation, such as:
 - `slightly blurry, review needed`
 
 This makes the report easier to audit and helps avoid treating the tool as a black box.
+
+### Memory-Safe Recommendation Logic
+
+Media Agent is designed as a review-prioritization system, not an automatic deletion system.
+
+Starting in v0.2.8, photo recommendations separate technical quality from possible memory value:
+
+- `technical_recommendation` stores the original quality-based recommendation.
+- `final_recommendation` stores the memory-safe final recommendation.
+- `keep_recommendation` remains available for compatibility and matches `final_recommendation`.
+- `memory_risk` and `memory_risk_reason` explain whether a photo may contain people, selfies, expressions, travel moments, or other memory-like content.
+- `content_safety_override` marks cases where the system protects a technically weak photo for human review.
+
+The current implementation is heuristic and local. It uses file names, paths, mock AI tags, scene type, subject type, duplicate grouping, blur score, and exposure score. It does not call external APIs or real vision models.
+
+People, selfies, expressions, family, friends, group photos, travel moments, and near-duplicate photos are more likely to be moved into `review` instead of being labeled as `reject_candidate`. Technical quality and emotional or story value are treated as separate signals.
 
 ### Interactive HTML Report
 
@@ -222,6 +244,9 @@ The report includes:
 - Best-pick ranking
 - System recommendation
 - Recommendation reason
+- Technical recommendation
+- Final recommendation
+- Memory risk and memory-safe override fields
 - Mock AI tagging fields
 - Manual decision controls
 
@@ -511,6 +536,16 @@ Video support is based on keyframe extraction. The system does not analyze full 
 - Served static HTML reports through local HTTP instead of relying on `file://`.
 - Added report preview documentation in `docs/LOCAL_REPORT_PREVIEW.md`.
 - Made browser testing of search, filters, sorting, localStorage decisions, and CSV export more reliable.
+
+### v0.2.8 - Memory-Safe Recommendation Logic
+
+- Added `media_agent/memory_safety.py`.
+- Preserved the original quality-based recommendation as `technical_recommendation`.
+- Added `final_recommendation`, `memory_risk`, `memory_risk_reason`, and `content_safety_override`.
+- Kept `keep_recommendation` compatible by mapping it to `final_recommendation`.
+- Prioritized people, selfies, expressions, travel moments, and memory-like photos for human review.
+- Reduced over-aggressive rejection of duplicate photos that may contain different expressions or moments.
+- Added dashboard statistics for memory-safe overrides, high memory risk, technical rejects, and final rejects.
 
 ## Installation
 

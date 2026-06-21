@@ -29,6 +29,10 @@ TRANSLATIONS = {
         "duplicate_groups": "重复组数量",
         "best_picks": "组内最佳数量",
         "waste_candidates": "废片候选数量",
+        "memory_safe_overrides": "回忆保护覆盖数量",
+        "high_memory_risk": "高回忆风险数量",
+        "technical_rejects": "技术删除候选数量",
+        "final_rejects": "最终删除候选数量",
         "average_blur": "平均清晰度",
         "average_exposure": "平均曝光",
         "ai_providers": "AI来源",
@@ -47,8 +51,13 @@ TRANSLATIONS = {
         "is_duplicate_candidate": "重复候选",
         "group_best_pick": "组内最佳",
         "group_rank": "组内排名",
+        "technical_recommendation": "技术建议",
+        "final_recommendation": "最终建议",
         "keep_recommendation": "系统建议",
         "recommendation_reason": "推荐原因",
+        "memory_risk": "回忆风险",
+        "memory_risk_reason": "回忆风险原因",
+        "content_safety_override": "内容保护覆盖",
         "ai_description": "AI描述",
         "ai_tags": "AI标签",
         "scene_type": "场景类型",
@@ -62,6 +71,7 @@ TRANSLATIONS = {
         "review": "复查",
         "reject": "剔除",
         "reject_candidate": "删除候选",
+        "memory_safe_review": "回忆保护复查",
     },
     "en": {
         "html_lang": "en",
@@ -77,6 +87,10 @@ TRANSLATIONS = {
         "duplicate_groups": "Duplicate Groups",
         "best_picks": "Best Picks",
         "waste_candidates": "Waste Candidates",
+        "memory_safe_overrides": "Memory-Safe Override Count",
+        "high_memory_risk": "High Memory Risk Count",
+        "technical_rejects": "Technical Reject Count",
+        "final_rejects": "Final Reject Count",
         "average_blur": "Average Blur Score",
         "average_exposure": "Average Exposure Score",
         "ai_providers": "AI Provider",
@@ -95,8 +109,13 @@ TRANSLATIONS = {
         "is_duplicate_candidate": "Duplicate Candidate",
         "group_best_pick": "Best Pick",
         "group_rank": "Group Rank",
+        "technical_recommendation": "Technical Recommendation",
+        "final_recommendation": "Final Recommendation",
         "keep_recommendation": "Recommendation",
         "recommendation_reason": "Recommendation Reason",
+        "memory_risk": "Memory Risk",
+        "memory_risk_reason": "Memory Risk Reason",
+        "content_safety_override": "Content Safety Override",
         "ai_description": "AI Description",
         "ai_tags": "AI Tags",
         "scene_type": "Scene Type",
@@ -110,6 +129,7 @@ TRANSLATIONS = {
         "review": "review",
         "reject": "reject",
         "reject_candidate": "reject_candidate",
+        "memory_safe_review": "memory-safe review",
     },
 }
 
@@ -173,6 +193,10 @@ def _build_dashboard(records: list[dict[str, Any]]) -> dict[str, Any]:
         "duplicate_group_count": len(duplicate_groups),
         "best_pick_count": sum(1 for record in records if record.get("group_best_pick") is True),
         "waste_candidate_count": sum(1 for record in records if record.get("waste_candidate") is True),
+        "memory_safe_override_count": sum(1 for record in records if record.get("content_safety_override") is True),
+        "high_memory_risk_count": sum(1 for record in records if record.get("memory_risk") == "high"),
+        "technical_reject_count": sum(1 for record in records if record.get("technical_recommendation") == "reject_candidate"),
+        "final_reject_count": sum(1 for record in records if record.get("final_recommendation") == "reject_candidate"),
         "average_blur_score": _average(record.get("blur_score") for record in records),
         "average_exposure_score": _average(record.get("exposure_score") for record in records),
         "ai_provider": ", ".join(ai_providers) if ai_providers else "none",
@@ -305,7 +329,7 @@ def _render_page(rows: str, count: int, dashboard: dict[str, Any], t: dict[str, 
     table {{
       width: 100%;
       border-collapse: collapse;
-      min-width: 2460px;
+      min-width: 3100px;
     }}
     th, td {{
       padding: 10px 12px;
@@ -441,8 +465,13 @@ def _render_page(rows: str, count: int, dashboard: dict[str, Any], t: dict[str, 
             <th>{t["is_duplicate_candidate"]}</th>
             <th>{t["group_best_pick"]}</th>
             <th>{t["group_rank"]}</th>
+            <th>{t["technical_recommendation"]}</th>
+            <th>{t["final_recommendation"]}</th>
             <th>{t["keep_recommendation"]}</th>
             <th>{t["recommendation_reason"]}</th>
+            <th>{t["memory_risk"]}</th>
+            <th>{t["memory_risk_reason"]}</th>
+            <th>{t["content_safety_override"]}</th>
             <th>{t["ai_description"]}</th>
             <th>{t["ai_tags"]}</th>
             <th>{t["scene_type"]}</th>
@@ -548,6 +577,10 @@ def _render_dashboard_cards(dashboard: dict[str, Any], t: dict[str, str]) -> str
         (t["duplicate_groups"], str(dashboard["duplicate_group_count"])),
         (t["best_picks"], str(dashboard["best_pick_count"])),
         (t["waste_candidates"], str(dashboard["waste_candidate_count"])),
+        (t["memory_safe_overrides"], str(dashboard["memory_safe_override_count"])),
+        (t["high_memory_risk"], str(dashboard["high_memory_risk_count"])),
+        (t["technical_rejects"], str(dashboard["technical_reject_count"])),
+        (t["final_rejects"], str(dashboard["final_reject_count"])),
         (t["average_blur"], _format_number(dashboard["average_blur_score"])),
         (t["average_exposure"], _format_number(dashboard["average_exposure_score"])),
         (t["ai_providers"], escape(str(dashboard["ai_provider"]))),
@@ -591,8 +624,13 @@ def _render_row(record: dict[str, Any], report_dir: Path, t: dict[str, str]) -> 
     is_duplicate_candidate = _render_bool_bad(record.get("is_duplicate_candidate"))
     group_best_pick = _render_bool_good(record.get("group_best_pick"))
     group_rank = _cell(record.get("group_rank"))
+    technical_recommendation = _render_recommendation(record.get("technical_recommendation"), t)
+    final_recommendation = _render_recommendation(record.get("final_recommendation"), t)
     keep_recommendation = _render_recommendation(record.get("keep_recommendation"), t)
     recommendation_reason = _cell(record.get("recommendation_reason"))
+    memory_risk = _cell(record.get("memory_risk"))
+    memory_risk_reason = _cell(record.get("memory_risk_reason"))
+    content_safety_override = _render_content_safety_override(record.get("content_safety_override"), t)
     ai_description = _ai_cell(record.get("ai_description"))
     ai_tags = _ai_cell(record.get("ai_tags"))
     scene_type = _ai_cell(record.get("scene_type"))
@@ -617,8 +655,13 @@ def _render_row(record: dict[str, Any], report_dir: Path, t: dict[str, str]) -> 
             <td>{is_duplicate_candidate}</td>
             <td>{group_best_pick}</td>
             <td>{group_rank}</td>
+            <td>{technical_recommendation}</td>
+            <td>{final_recommendation}</td>
             <td>{keep_recommendation}</td>
             <td>{recommendation_reason}</td>
+            <td>{memory_risk}</td>
+            <td>{memory_risk_reason}</td>
+            <td>{content_safety_override}</td>
             <td>{ai_description}</td>
             <td>{ai_tags}</td>
             <td>{scene_type}</td>
@@ -662,6 +705,14 @@ def _render_bool_bad(value: Any) -> str:
 def _render_bool_good(value: Any) -> str:
     if value is True:
         return '<span class="badge good">True</span>'
+    if value is False:
+        return '<span class="badge">False</span>'
+    return '<span class="empty">-</span>'
+
+
+def _render_content_safety_override(value: Any, t: dict[str, str]) -> str:
+    if value is True:
+        return f'<span class="badge warn">{t["memory_safe_review"]}</span>'
     if value is False:
         return '<span class="badge">False</span>'
     return '<span class="empty">-</span>'
