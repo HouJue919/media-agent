@@ -6,7 +6,7 @@ AI-assisted visual asset management for photographers and content creators.
 
 Current release: v0.1.0 Portfolio Release
 
-Current development milestone: v0.2.6 Video Report Sorting & Priority Review
+Current development milestone: v0.2.7 Local Report Preview Server
 
 Media Agent is a local-first Python project for reviewing, organizing, and documenting large photo and video libraries. It scans folders of media files, extracts metadata and EXIF data, evaluates basic visual quality, detects duplicate or similar photos, recommends the best image in each duplicate group, and generates both CSV and interactive HTML reports.
 
@@ -28,7 +28,7 @@ Modern photo libraries often contain hundreds or thousands of images from camera
 - Let the user make final decisions in an HTML report.
 - Safely organize selected files without deleting originals.
 
-The current development milestone is **v0.2.6 Video Report Sorting & Priority Review**.
+The current development milestone is **v0.2.7 Local Report Preview Server**.
 
 ## Screenshots
 
@@ -315,6 +315,7 @@ The video workflow:
 - Exports `video_decisions.csv` with `file_path`, `video_quality_recommendation`, and `user_decision`.
 - Provides filename search and recommendation filtering in the video report.
 - Provides browser-side sorting and priority review filters for faster video triage.
+- Provides a local HTTP preview server for static HTML reports.
 - Safely organizes reviewed videos into keep, review, and reject folders without deleting originals.
 
 Video support is based on keyframe extraction. The system does not analyze full video semantics yet. Future versions may add scene recognition, shot detection, stabilization improvement suggestions, and natural language search.
@@ -345,6 +346,9 @@ Video support is based on keyframe extraction. The system does not analyze full 
 +-- scripts
 |   +-- generate_demo_media.py
 |   +-- generate_demo_videos.py
+|   +-- serve_report.py
++-- docs
+|   +-- LOCAL_REPORT_PREVIEW.md
 +-- tests
 +-- media_agent
     +-- __init__.py
@@ -501,6 +505,13 @@ Video support is based on keyframe extraction. The system does not analyze full 
 - Combined search, recommendation filtering, priority filtering, and sorting in the same report view.
 - Kept manual video decisions, localStorage persistence, and `video_decisions.csv` export unchanged.
 
+### v0.2.7 - Local Report Preview Server
+
+- Added `scripts/serve_report.py`.
+- Served static HTML reports through local HTTP instead of relying on `file://`.
+- Added report preview documentation in `docs/LOCAL_REPORT_PREVIEW.md`.
+- Made browser testing of search, filters, sorting, localStorage decisions, and CSV export more reliable.
+
 ## Installation
 
 Clone the repository, enter the project directory, create a virtual environment, and install dependencies:
@@ -534,6 +545,20 @@ python main.py demo_videos --mode video --language en --report video_report.html
 ```
 
 This creates a local `video_report.html`, `video_index.csv`, and `video_keyframes/`. These generated outputs are ignored by Git.
+
+Preview the generated report through local HTTP:
+
+```bash
+python scripts/serve_report.py --directory . --port 8000
+```
+
+Then open:
+
+```text
+http://localhost:8000/video_report.html
+```
+
+Using local HTTP is recommended over directly opening `file://` reports because some browsers restrict JavaScript, localStorage, or downloads on local file URLs.
 
 ## Usage
 
@@ -569,9 +594,27 @@ The generated video report includes:
 - Keyframe previews
 - Filename search
 - Recommendation filtering by `keep`, `review`, and `reject_candidate`
+- Priority Review filtering
+- Sort By controls
 - Manual `keep`, `review`, and `reject` buttons
 - Browser-local decision persistence
 - Export to `video_decisions.csv`
+
+### Report Preview
+
+Serve generated reports over local HTTP:
+
+```bash
+python scripts/serve_report.py --directory . --port 8000
+```
+
+Then open the printed report URL, for example:
+
+```text
+http://localhost:8000/video_report.html
+```
+
+Stop the preview server with `Ctrl+C`.
 
 ### Generate a Chinese Report
 
