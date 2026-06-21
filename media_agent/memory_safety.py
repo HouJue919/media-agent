@@ -76,6 +76,9 @@ def apply_memory_safe_recommendations(records: list[dict[str, Any]]) -> list[dic
 
 
 def _memory_risk(record: dict[str, Any]) -> tuple[str, str]:
+    if _has_person_signal(record):
+        return "high", "possible person or face detected"
+
     path_text = _search_text(record, ("filename", "path"))
     if _contains_any(path_text, MEMORY_KEYWORDS):
         return "high", "possible person or memory photo"
@@ -170,6 +173,8 @@ def _technical_reject_reason(record: dict[str, Any]) -> str:
 
 
 def _memory_safe_review_reason(record: dict[str, Any]) -> str:
+    if _has_person_signal(record):
+        return "possible person/face detected; memory-safe review recommended"
     reason = str(record.get("recommendation_reason") or "")
     if "blur" in reason.lower() or _number_or_default(record.get("blur_score"), 9999.0) < SEVERE_BLUR_THRESHOLD:
         return "blurry image; memory-safe review recommended"
@@ -191,6 +196,10 @@ def _search_text(record: dict[str, Any], fields: tuple[str, ...]) -> str:
 
 def _contains_any(text: str, keywords: tuple[str, ...]) -> bool:
     return any(keyword in text for keyword in keywords)
+
+
+def _has_person_signal(record: dict[str, Any]) -> bool:
+    return record.get("person_signal") is True or record.get("face_detected") is True
 
 
 def _number_or_default(value: Any, default: float | None) -> float | None:

@@ -51,6 +51,34 @@ def test_low_memory_severe_blurry_photo_can_remain_reject_candidate() -> None:
     assert record["recommendation_reason"] == "technical reject candidate: severe blur"
 
 
+def test_person_signal_reject_candidate_becomes_review() -> None:
+    records = [
+        _record(
+            "technical_blurry_photo.jpg",
+            keep_recommendation="reject_candidate",
+            recommendation_reason="blurry image",
+            blur_score=25,
+            exposure_score=90,
+            face_detected=True,
+            face_count=1,
+            person_signal=True,
+            person_signal_confidence=0.7,
+            person_signal_method="haar_face",
+        )
+    ]
+
+    apply_memory_safe_recommendations(records)
+
+    record = records[0]
+    assert record["technical_recommendation"] == "reject_candidate"
+    assert record["final_recommendation"] == "review"
+    assert record["keep_recommendation"] == "review"
+    assert record["memory_risk"] == "high"
+    assert record["memory_risk_reason"] == "possible person or face detected"
+    assert record["content_safety_override"] is True
+    assert "possible person/face detected" in record["recommendation_reason"]
+
+
 def test_duplicate_non_best_with_close_quality_becomes_review() -> None:
     records = [
         _record(
@@ -132,6 +160,11 @@ def test_csv_and_html_include_memory_safe_fields(tmp_path: Path) -> None:
     assert csv_rows[0]["memory_risk"] == "high"
     assert csv_rows[0]["memory_risk_reason"] == "possible person or memory photo"
     assert csv_rows[0]["content_safety_override"] == "True"
+    assert csv_rows[0]["face_detected"] == "False"
+    assert csv_rows[0]["face_count"] == "0"
+    assert csv_rows[0]["person_signal"] == "False"
+    assert csv_rows[0]["person_signal_confidence"] == "0.0"
+    assert csv_rows[0]["person_signal_method"] == "none"
 
     html = report_path.read_text(encoding="utf-8")
     assert "Technical Recommendation" in html
@@ -141,6 +174,14 @@ def test_csv_and_html_include_memory_safe_fields(tmp_path: Path) -> None:
     assert "Content Safety Override" in html
     assert "memory-safe review" in html
     assert "Memory-Safe Override Count" in html
+    assert "Face Detected" in html
+    assert "Face Count" in html
+    assert "Person Signal" in html
+    assert "Person Signal Confidence" in html
+    assert "Person Signal Method" in html
+    assert "Face Detected Count" in html
+    assert "Person Signal Count" in html
+    assert "Person-Signal Memory-Safe Override Count" in html
 
     zh_report_path = tmp_path / "report_zh.html"
     export_html_report(records, zh_report_path, language="zh")
@@ -152,6 +193,14 @@ def test_csv_and_html_include_memory_safe_fields(tmp_path: Path) -> None:
     assert "内容保护覆盖" in zh_html
     assert "回忆保护复查" in zh_html
     assert "回忆保护覆盖数量" in zh_html
+    assert "检测到人脸" in zh_html
+    assert "人脸数量" in zh_html
+    assert "人物信号" in zh_html
+    assert "人物信号置信度" in zh_html
+    assert "人物检测方法" in zh_html
+    assert "检测到人脸数量" in zh_html
+    assert "人物信号数量" in zh_html
+    assert "人物保护覆盖数量" in zh_html
 
 
 def _record(
@@ -167,6 +216,11 @@ def _record(
     duplicate_count: int = 1,
     group_best_pick: bool | None = None,
     group_rank: int | None = None,
+    face_detected: bool = False,
+    face_count: int = 0,
+    person_signal: bool = False,
+    person_signal_confidence: float = 0.0,
+    person_signal_method: str = "none",
 ) -> dict[str, object]:
     return {
         "filename": filename,
@@ -180,6 +234,11 @@ def _record(
         "lens_model": "",
         "taken_at": "",
         "thumbnail_path": "",
+        "face_detected": face_detected,
+        "face_count": face_count,
+        "person_signal": person_signal,
+        "person_signal_confidence": person_signal_confidence,
+        "person_signal_method": person_signal_method,
         "duplicate_group_id": duplicate_group_id,
         "duplicate_count": duplicate_count,
         "is_duplicate_candidate": bool(duplicate_group_id),

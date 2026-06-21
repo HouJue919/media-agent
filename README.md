@@ -192,6 +192,11 @@ Generated fields:
 - `memory_risk`
 - `memory_risk_reason`
 - `content_safety_override`
+- `face_detected`
+- `face_count`
+- `person_signal`
+- `person_signal_confidence`
+- `person_signal_method`
 
 Only one photo in each duplicate group can be marked as `group_best_pick=True`.
 
@@ -222,9 +227,17 @@ Starting in v0.2.8, photo recommendations separate technical quality from possib
 - `memory_risk` and `memory_risk_reason` explain whether a photo may contain people, selfies, expressions, travel moments, or other memory-like content.
 - `content_safety_override` marks cases where the system protects a technically weak photo for human review.
 
-The current implementation is heuristic and local. It uses file names, paths, mock AI tags, scene type, subject type, duplicate grouping, blur score, and exposure score. It does not call external APIs or real vision models.
+The current implementation is heuristic and local. It uses file names, paths, mock AI tags, scene type, subject type, duplicate grouping, blur score, exposure score, and local face/person signal detection. It does not call external APIs or real vision models.
 
 People, selfies, expressions, family, friends, group photos, travel moments, and near-duplicate photos are more likely to be moved into `review` instead of being labeled as `reject_candidate`. Technical quality and emotional or story value are treated as separate signals.
+
+### Local Face / Person Signal Detection
+
+Starting in v0.2.9, Media Agent uses local OpenCV Haar Cascade face detection to identify whether a photo may contain a face/person signal.
+
+This is not face recognition. The system does not identify people, compare identities, or determine who appears in a photo. It only detects whether a photo may contain a face/person signal so memory-like photos are less likely to be automatically marked as reject candidates.
+
+When a possible face/person signal is detected, technically weak photos are prioritized for human review instead of deletion-oriented rejection. The generated fields are `face_detected`, `face_count`, `person_signal`, `person_signal_confidence`, and `person_signal_method`.
 
 ### Interactive HTML Report
 
@@ -247,6 +260,7 @@ The report includes:
 - Technical recommendation
 - Final recommendation
 - Memory risk and memory-safe override fields
+- Face/person signal fields
 - Mock AI tagging fields
 - Manual decision controls
 
@@ -546,6 +560,16 @@ Video support is based on keyframe extraction. The system does not analyze full 
 - Prioritized people, selfies, expressions, travel moments, and memory-like photos for human review.
 - Reduced over-aggressive rejection of duplicate photos that may contain different expressions or moments.
 - Added dashboard statistics for memory-safe overrides, high memory risk, technical rejects, and final rejects.
+
+### v0.2.9 - Local Face / Person Signal Detection
+
+- Added `media_agent/person_signal.py`.
+- Used local OpenCV Haar Cascade detection to flag possible face/person signals.
+- Added `face_detected`, `face_count`, `person_signal`, `person_signal_confidence`, and `person_signal_method` fields to CSV and HTML reports.
+- Integrated face/person signals into memory-safe recommendation logic.
+- Prioritized possible people or memory photos for human review when technical quality is weak.
+- Added dashboard statistics for face detections, person signals, and person-signal memory-safe overrides.
+- This is not face recognition and does not identify people.
 
 ## Installation
 

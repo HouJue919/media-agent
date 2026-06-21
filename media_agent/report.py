@@ -33,6 +33,9 @@ TRANSLATIONS = {
         "high_memory_risk": "高回忆风险数量",
         "technical_rejects": "技术删除候选数量",
         "final_rejects": "最终删除候选数量",
+        "face_detected_count": "检测到人脸数量",
+        "person_signal_count": "人物信号数量",
+        "person_signal_overrides": "人物保护覆盖数量",
         "average_blur": "平均清晰度",
         "average_exposure": "平均曝光",
         "ai_providers": "AI来源",
@@ -46,6 +49,11 @@ TRANSLATIONS = {
         "exposure": "曝光评分",
         "blur": "清晰度评分",
         "waste": "废片候选",
+        "face_detected": "检测到人脸",
+        "face_count": "人脸数量",
+        "person_signal": "人物信号",
+        "person_signal_confidence": "人物信号置信度",
+        "person_signal_method": "人物检测方法",
         "duplicate_group_id": "重复组",
         "duplicate_count": "重复数量",
         "is_duplicate_candidate": "重复候选",
@@ -91,6 +99,9 @@ TRANSLATIONS = {
         "high_memory_risk": "High Memory Risk Count",
         "technical_rejects": "Technical Reject Count",
         "final_rejects": "Final Reject Count",
+        "face_detected_count": "Face Detected Count",
+        "person_signal_count": "Person Signal Count",
+        "person_signal_overrides": "Person-Signal Memory-Safe Override Count",
         "average_blur": "Average Blur Score",
         "average_exposure": "Average Exposure Score",
         "ai_providers": "AI Provider",
@@ -104,6 +115,11 @@ TRANSLATIONS = {
         "exposure": "Exposure Score",
         "blur": "Blur Score",
         "waste": "Waste Candidate",
+        "face_detected": "Face Detected",
+        "face_count": "Face Count",
+        "person_signal": "Person Signal",
+        "person_signal_confidence": "Person Signal Confidence",
+        "person_signal_method": "Person Signal Method",
         "duplicate_group_id": "Duplicate Group",
         "duplicate_count": "Duplicate Count",
         "is_duplicate_candidate": "Duplicate Candidate",
@@ -197,6 +213,15 @@ def _build_dashboard(records: list[dict[str, Any]]) -> dict[str, Any]:
         "high_memory_risk_count": sum(1 for record in records if record.get("memory_risk") == "high"),
         "technical_reject_count": sum(1 for record in records if record.get("technical_recommendation") == "reject_candidate"),
         "final_reject_count": sum(1 for record in records if record.get("final_recommendation") == "reject_candidate"),
+        "face_detected_count": sum(1 for record in records if record.get("face_detected") is True),
+        "person_signal_count": sum(1 for record in records if record.get("person_signal") is True),
+        "person_signal_override_count": sum(
+            1
+            for record in records
+            if (record.get("person_signal") is True or record.get("face_detected") is True)
+            and record.get("technical_recommendation") == "reject_candidate"
+            and record.get("final_recommendation") == "review"
+        ),
         "average_blur_score": _average(record.get("blur_score") for record in records),
         "average_exposure_score": _average(record.get("exposure_score") for record in records),
         "ai_provider": ", ".join(ai_providers) if ai_providers else "none",
@@ -329,7 +354,7 @@ def _render_page(rows: str, count: int, dashboard: dict[str, Any], t: dict[str, 
     table {{
       width: 100%;
       border-collapse: collapse;
-      min-width: 3100px;
+      min-width: 3700px;
     }}
     th, td {{
       padding: 10px 12px;
@@ -460,6 +485,11 @@ def _render_page(rows: str, count: int, dashboard: dict[str, Any], t: dict[str, 
             <th>{t["exposure"]}</th>
             <th>{t["blur"]}</th>
             <th>{t["waste"]}</th>
+            <th>{t["face_detected"]}</th>
+            <th>{t["face_count"]}</th>
+            <th>{t["person_signal"]}</th>
+            <th>{t["person_signal_confidence"]}</th>
+            <th>{t["person_signal_method"]}</th>
             <th>{t["duplicate_group_id"]}</th>
             <th>{t["duplicate_count"]}</th>
             <th>{t["is_duplicate_candidate"]}</th>
@@ -581,6 +611,9 @@ def _render_dashboard_cards(dashboard: dict[str, Any], t: dict[str, str]) -> str
         (t["high_memory_risk"], str(dashboard["high_memory_risk_count"])),
         (t["technical_rejects"], str(dashboard["technical_reject_count"])),
         (t["final_rejects"], str(dashboard["final_reject_count"])),
+        (t["face_detected_count"], str(dashboard["face_detected_count"])),
+        (t["person_signal_count"], str(dashboard["person_signal_count"])),
+        (t["person_signal_overrides"], str(dashboard["person_signal_override_count"])),
         (t["average_blur"], _format_number(dashboard["average_blur_score"])),
         (t["average_exposure"], _format_number(dashboard["average_exposure_score"])),
         (t["ai_providers"], escape(str(dashboard["ai_provider"]))),
@@ -619,6 +652,11 @@ def _render_row(record: dict[str, Any], report_dir: Path, t: dict[str, str]) -> 
     exposure_score = _cell(record.get("exposure_score"))
     blur_score = _cell(record.get("blur_score"))
     waste_candidate = _render_bool_bad(record.get("waste_candidate"))
+    face_detected = _render_bool_signal(record.get("face_detected"))
+    face_count = _cell(record.get("face_count"))
+    person_signal = _render_bool_signal(record.get("person_signal"))
+    person_signal_confidence = _cell(record.get("person_signal_confidence"))
+    person_signal_method = _cell(record.get("person_signal_method"))
     duplicate_group_id = _cell(record.get("duplicate_group_id"))
     duplicate_count = _cell(record.get("duplicate_count"))
     is_duplicate_candidate = _render_bool_bad(record.get("is_duplicate_candidate"))
@@ -650,6 +688,11 @@ def _render_row(record: dict[str, Any], report_dir: Path, t: dict[str, str]) -> 
             <td>{exposure_score}</td>
             <td>{blur_score}</td>
             <td>{waste_candidate}</td>
+            <td>{face_detected}</td>
+            <td>{face_count}</td>
+            <td>{person_signal}</td>
+            <td>{person_signal_confidence}</td>
+            <td>{person_signal_method}</td>
             <td>{duplicate_group_id}</td>
             <td>{duplicate_count}</td>
             <td>{is_duplicate_candidate}</td>
@@ -705,6 +748,14 @@ def _render_bool_bad(value: Any) -> str:
 def _render_bool_good(value: Any) -> str:
     if value is True:
         return '<span class="badge good">True</span>'
+    if value is False:
+        return '<span class="badge">False</span>'
+    return '<span class="empty">-</span>'
+
+
+def _render_bool_signal(value: Any) -> str:
+    if value is True:
+        return '<span class="badge warn">True</span>'
     if value is False:
         return '<span class="badge">False</span>'
     return '<span class="empty">-</span>'

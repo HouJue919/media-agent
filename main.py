@@ -159,6 +159,7 @@ def _run_photo_workflow(args: argparse.Namespace, folder: Path) -> None:
     from media_agent.export import export_csv
     from media_agent.memory_safety import apply_memory_safe_recommendations
     from media_agent.metadata import build_media_record
+    from media_agent.person_signal import detect_person_signal
     from media_agent.quality import analyze_quality
     from media_agent.report import export_html_report, sort_records_for_review
     from media_agent.scanner import scan_media_files
@@ -179,8 +180,10 @@ def _run_photo_workflow(args: argparse.Namespace, folder: Path) -> None:
         record = build_media_record(file_path)
         quality = analyze_quality(file_path)
         thumbnail_path = create_thumbnail(file_path, thumbnail_dir)
+        person_signal = detect_person_signal(thumbnail_path or file_path)
         record.update(quality)
         record["thumbnail_path"] = str(thumbnail_path) if thumbnail_path else None
+        record.update(person_signal)
         records.append(record)
 
     annotate_duplicate_groups(records)
