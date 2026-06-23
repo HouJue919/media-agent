@@ -13,6 +13,19 @@ def test_app_py_exists_and_compiles() -> None:
     py_compile.compile(str(app_path), doraise=True)
 
 
+def test_gui_key_ui_text_exists() -> None:
+    source = Path("app.py").read_text(encoding="utf-8")
+
+    assert app.APP_TITLE == "Media Agent"
+    assert app.APP_SUBTITLE == "Local photo and video asset management for creators."
+    assert app.PRIVACY_NOTICE == "All processing runs locally. Media files are not uploaded."
+    assert "Analyze" in source
+    assert "Organize" in source
+    assert "Help" in source
+    assert "copy is recommended; move changes file locations" in source
+    assert app.GITHUB_REPO_URL == "https://github.com/HouJue919/media-agent"
+
+
 def test_build_photo_command() -> None:
     command = app.build_photo_command(
         "demo_media",

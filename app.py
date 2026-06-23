@@ -8,6 +8,10 @@ from typing import Any
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent
+APP_TITLE = "Media Agent"
+APP_SUBTITLE = "Local photo and video asset management for creators."
+PRIVACY_NOTICE = "All processing runs locally. Media files are not uploaded."
+GITHUB_REPO_URL = "https://github.com/HouJue919/media-agent"
 
 
 def build_photo_command(
@@ -157,75 +161,130 @@ def main() -> None:
             "pip install -r requirements-gui.txt"
         ) from exc
 
-    st.set_page_config(page_title="Media Agent", layout="wide")
-    st.title("Media Agent")
-    st.caption("AI-assisted photo and video asset management for creators.")
+    st.set_page_config(page_title=APP_TITLE, layout="wide")
+    st.title(APP_TITLE)
+    st.caption(APP_SUBTITLE)
+    st.info(PRIVACY_NOTICE)
 
-    mode = st.selectbox(
-        "Mode",
-        ["Photo Analysis", "Video Analysis", "Organize Photos", "Organize Videos"],
+    analyze_tab, organize_tab, help_tab = st.tabs(["Analyze", "Organize", "Help"])
+    with analyze_tab:
+        _render_analyze_tab(st)
+    with organize_tab:
+        _render_organize_tab(st)
+    with help_tab:
+        _render_help_tab(st)
+
+
+def _render_analyze_tab(st: Any) -> None:
+    analysis_mode = st.radio(
+        "Analysis Type",
+        ["Photo Analysis", "Video Analysis"],
+        horizontal=True,
+    )
+    folder_path = st.text_input(
+        "Photo/Video Folder Path",
+        placeholder="/path/to/photos-or-videos",
+    )
+    language = st.selectbox("Language", ["zh", "en"], index=0)
+    open_report = st.checkbox("Open report after generation", value=True)
+
+    if analysis_mode == "Photo Analysis":
+        enable_ai_tags = st.checkbox("Enable mock AI tags", value=False)
+        st.text_input("AI Provider", value="mock", disabled=True)
+        report = st.text_input("Report filename", value=f"report_{language}.html")
+        output = st.text_input("CSV filename", value="media_index.csv")
+        command = build_photo_command(
+            folder_path,
+            language=language,
+            report=report,
+            output=output,
+            enable_ai_tags=enable_ai_tags,
+        )
+    else:
+        left, right = st.columns(2)
+        with left:
+            frame_interval = st.number_input("Frame interval seconds", min_value=0.5, value=5.0, step=0.5)
+        with right:
+            max_frames = st.number_input("Max frames per video", min_value=1, value=12, step=1)
+        report = st.text_input("Report filename", value=f"video_report_{language}.html")
+        output = st.text_input("CSV filename", value="video_index.csv")
+        command = build_video_command(
+            folder_path,
+            language=language,
+            report=report,
+            output=output,
+            frame_interval=float(frame_interval),
+            max_frames=int(max_frames),
+        )
+
+    _render_run_button(
+        st,
+        command,
+        resolve_report_path(report),
+        open_report,
+        required_path=folder_path,
+        button_label="Run Analysis",
     )
 
-    command: list[str] | None = None
-    report_path_for_open: Path | None = None
 
-    if mode in {"Photo Analysis", "Video Analysis"}:
-        folder_path = st.text_input(
-            "Photo/Video Folder Path",
-            placeholder="/path/to/photos-or-videos",
-        )
-        language = st.selectbox("Language", ["zh", "en"], index=0)
-        open_report = st.checkbox("Open report after generation", value=True)
+def _render_organize_tab(st: Any) -> None:
+    organize_mode = st.radio(
+        "Organize Type",
+        ["Organize Photos", "Organize Videos"],
+        horizontal=True,
+    )
+    st.warning("copy is recommended; move changes file locations")
+    action = st.selectbox("Mode action", ["copy", "move"], index=0)
 
-        if mode == "Photo Analysis":
-            enable_ai_tags = st.checkbox("Enable mock AI tags", value=False)
-            st.text_input("AI Provider", value="mock", disabled=True)
-            report = st.text_input("Report filename", value=f"report_{language}.html")
-            output = st.text_input("CSV filename", value="media_index.csv")
-            command = build_photo_command(
-                folder_path,
-                language=language,
-                report=report,
-                output=output,
-                enable_ai_tags=enable_ai_tags,
-            )
-        else:
-            frame_interval = st.number_input("Frame interval seconds", min_value=0.5, value=5.0, step=0.5)
-            max_frames = st.number_input("Max frames per video", min_value=1, value=12, step=1)
-            report = st.text_input("Report filename", value=f"video_report_{language}.html")
-            output = st.text_input("CSV filename", value="video_index.csv")
-            command = build_video_command(
-                folder_path,
-                language=language,
-                report=report,
-                output=output,
-                frame_interval=float(frame_interval),
-                max_frames=int(max_frames),
-            )
-        report_path_for_open = resolve_report_path(report)
-        _render_run_button(st, command, report_path_for_open, open_report, required_path=folder_path)
-
-    elif mode == "Organize Photos":
-        decisions_path = st.text_input("decisions.csv path", value="decisions.csv")
-        organize_output = st.text_input("Organize output folder", value="organized_media")
-        organize_mode = st.selectbox("Mode action", ["copy", "move"], index=0)
+    if organize_mode == "Organize Photos":
+        decisions_path = st.text_input("Decisions file path", value="decisions.csv")
+        organize_output = st.text_input("Output folder", value="organized_media")
         command = build_photo_organize_command(
             decisions_path,
             organize_output=organize_output,
-            organize_mode=organize_mode,
+            organize_mode=action,
         )
-        _render_run_button(st, command, None, False, required_path=decisions_path)
-
     else:
-        decisions_path = st.text_input("video_decisions.csv path", value="video_decisions.csv")
-        organize_output = st.text_input("Organize output folder", value="organized_videos")
-        organize_mode = st.selectbox("Mode action", ["copy", "move"], index=0)
+        decisions_path = st.text_input("Decisions file path", value="video_decisions.csv")
+        organize_output = st.text_input("Output folder", value="organized_videos")
         command = build_video_organize_command(
             decisions_path,
             organize_output=organize_output,
-            organize_mode=organize_mode,
+            organize_mode=action,
         )
-        _render_run_button(st, command, None, False, required_path=decisions_path)
+
+    _render_run_button(
+        st,
+        command,
+        None,
+        False,
+        required_path=decisions_path,
+        button_label="Run Organization",
+    )
+
+
+def _render_help_tab(st: Any) -> None:
+    st.subheader("Basic workflow")
+    st.markdown(
+        """
+- Photo: scan -> review -> export decisions -> organize
+- Video: scan -> keyframes -> review -> export decisions -> organize
+        """.strip()
+    )
+
+    st.subheader("CLI fallback examples")
+    st.code(
+        "\n".join(
+            [
+                "python main.py /path/to/photos --language en --report report_en.html --enable-ai-tags --ai-provider mock",
+                "python main.py /path/to/videos --mode video --language en --report video_report.html --frame-interval 5 --max-frames 12",
+                "python main.py --decisions decisions.csv --organize-output organized_media --organize-mode copy",
+                "python main.py --mode video-organize --video-decisions video_decisions.csv --video-organize-output organized_videos --mode-action copy",
+            ]
+        ),
+        language="bash",
+    )
+    st.markdown(f"GitHub repo: [{GITHUB_REPO_URL}]({GITHUB_REPO_URL})")
 
 
 def _render_run_button(
@@ -235,9 +294,11 @@ def _render_run_button(
     open_report: bool,
     *,
     required_path: str,
+    button_label: str,
 ) -> None:
+    st.subheader("Final command")
     st.code(" ".join(command), language="bash")
-    if not st.button("Run"):
+    if not st.button(button_label):
         return
 
     if not required_path.strip():
@@ -251,8 +312,9 @@ def _render_run_button(
         st.success("Media Agent completed successfully.")
         result = parse_cli_output(completed.stdout)
         _render_result_summary(st, result)
+        _render_result_links(st, result)
         if completed.stdout:
-            with st.expander("Command output"):
+            with st.expander("stdout"):
                 st.code(completed.stdout)
         if report_path_for_open and open_report:
             webbrowser.open(report_path_for_open.as_uri())
@@ -260,10 +322,10 @@ def _render_run_button(
     else:
         st.error("Media Agent failed.")
         if completed.stdout:
-            with st.expander("Command output"):
+            with st.expander("stdout"):
                 st.code(completed.stdout)
         if completed.stderr:
-            with st.expander("Error output", expanded=True):
+            with st.expander("stderr", expanded=True):
                 st.code(completed.stderr)
 
 
@@ -282,6 +344,26 @@ def _render_result_summary(st: Any, result: dict[str, str]) -> None:
     for key, label in labels.items():
         if key in result:
             st.write(f"**{label}:** `{result[key]}`")
+
+
+def _render_result_links(st: Any, result: dict[str, str]) -> None:
+    link_targets = [
+        ("Open report", result.get("report_path")),
+        ("Open CSV", result.get("csv_path")),
+        ("Open thumbnails folder", result.get("thumbnails_path")),
+        ("Open keyframes folder", result.get("keyframes_path")),
+        ("Open organized folder", result.get("organized_path")),
+    ]
+    for label, raw_path in link_targets:
+        if not raw_path:
+            continue
+        path = Path(raw_path).expanduser()
+        if not path.exists():
+            continue
+        if hasattr(st, "link_button"):
+            st.link_button(label, path.resolve().as_uri())
+        else:
+            st.write(f"{label}: {path.resolve().as_uri()}")
 
 
 if __name__ == "__main__":

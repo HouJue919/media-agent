@@ -4,7 +4,7 @@ AI-assisted visual asset management for photographers and content creators.
 
 [![Media Agent CI](https://github.com/HouJue919/media-agent/actions/workflows/test.yml/badge.svg)](https://github.com/HouJue919/media-agent/actions/workflows/test.yml)
 
-Current release: v0.3.0 Creator Workflow Release
+Current release: v0.3.2 GUI Polish
 
 Media Agent is now a photo and video asset management system for creators.
 
@@ -29,7 +29,7 @@ Modern photo libraries often contain hundreds or thousands of images from camera
 - Let the user make final decisions in an HTML report.
 - Safely organize selected files without deleting originals.
 
-The current release is **v0.3.0 Creator Workflow Release**.
+The current release is **v0.3.2 GUI Polish**.
 
 ## Screenshots
 
@@ -38,6 +38,8 @@ The screenshots below were generated from a full 157-photo test run. Personal th
 ![Media Agent dashboard summary](docs/assets/media-agent-dashboard.png)
 
 ![Media Agent redacted report table](docs/assets/media-agent-report-redacted.png)
+
+GUI screenshot placeholder: `screenshots/gui_placeholder.png` will be added later.
 
 ## Project Architecture
 
@@ -587,6 +589,14 @@ Video support is based on keyframe extraction. The system does not analyze full 
 - Added GUI-specific dependency installation through `requirements-gui.txt`.
 - Preserved direct CLI usage for automation and advanced workflows.
 
+### v0.3.2 - GUI Polish
+
+- Organized the Streamlit app into Analyze, Organize, and Help tabs.
+- Added local-processing privacy messaging at the top of the GUI.
+- Improved command visibility, stdout/stderr display, and result links for generated reports and output folders.
+- Added GUI workflow help, CLI fallback examples, and the GitHub repository link.
+- Kept the GUI as a local wrapper around the existing CLI workflow.
+
 ## Installation
 
 Clone the repository, enter the project directory, create a virtual environment, and install dependencies:
@@ -657,6 +667,8 @@ The GUI is local only. Media files are not uploaded, and the app wraps the exist
 - Video Analysis
 - Organize Photos
 - Organize Videos
+
+The interface is organized into Analyze, Organize, and Help tabs. It shows the final CLI command before running, displays stdout/stderr after execution, and provides local links to generated reports and output folders when available.
 
 The command-line workflow remains available for direct automation and batch use.
 
@@ -949,7 +961,7 @@ python main.py --decisions decisions.csv --organize-output organized_media --org
 
 ## Status
 
-Media Agent is currently at **v0.3.1 Local GUI Prototype** after the v0.3.0 Creator Workflow Release. It is ready for small to medium creator photo and video review workflows with local-first analysis, static reports, human decisions, safe organization, and an early local GUI.
+Media Agent is currently at **v0.3.2 GUI Polish** after the v0.3.0 Creator Workflow Release. It is ready for small to medium creator photo and video review workflows with local-first analysis, static reports, human decisions, safe organization, and an early local GUI.
 
 ## License
 
