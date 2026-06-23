@@ -4,7 +4,7 @@ AI-assisted visual asset management for photographers and content creators.
 
 [![Media Agent CI](https://github.com/HouJue919/media-agent/actions/workflows/test.yml/badge.svg)](https://github.com/HouJue919/media-agent/actions/workflows/test.yml)
 
-Current release: v0.3.2 GUI Polish
+Current release: v0.3.3 Desktop Launcher
 
 Media Agent is now a photo and video asset management system for creators.
 
@@ -29,7 +29,7 @@ Modern photo libraries often contain hundreds or thousands of images from camera
 - Let the user make final decisions in an HTML report.
 - Safely organize selected files without deleting originals.
 
-The current release is **v0.3.2 GUI Polish**.
+The current release is **v0.3.3 Desktop Launcher**.
 
 ## Screenshots
 
@@ -597,6 +597,14 @@ Video support is based on keyframe extraction. The system does not analyze full 
 - Added GUI workflow help, CLI fallback examples, and the GitHub repository link.
 - Kept the GUI as a local wrapper around the existing CLI workflow.
 
+### v0.3.3 - Desktop Launcher
+
+- Added `scripts/create_desktop_launcher.py`.
+- Creates a macOS desktop launcher named `Media Agent GUI.command`.
+- Lets users double-click from the desktop to start the local Streamlit GUI.
+- Checks for Python, `requirements-gui.txt`, and Streamlit before launching.
+- Keeps the launcher local-only and non-destructive.
+
 ## Installation
 
 Clone the repository, enter the project directory, create a virtual environment, and install dependencies:
@@ -671,6 +679,22 @@ The GUI is local only. Media files are not uploaded, and the app wraps the exist
 The interface is organized into Analyze, Organize, and Help tabs. It shows the final CLI command before running, displays stdout/stderr after execution, and provides local links to generated reports and output folders when available.
 
 The command-line workflow remains available for direct automation and batch use.
+
+### Desktop Launcher
+
+Create a macOS desktop launcher:
+
+```bash
+python scripts/create_desktop_launcher.py
+```
+
+Then double-click this file on the desktop:
+
+```text
+Media Agent GUI.command
+```
+
+The launcher starts the same local Streamlit GUI. It checks for Python and Streamlit before launching and prints the same local-processing privacy notice.
 
 ### Basic Scan
 
@@ -961,7 +985,7 @@ python main.py --decisions decisions.csv --organize-output organized_media --org
 
 ## Status
 
-Media Agent is currently at **v0.3.2 GUI Polish** after the v0.3.0 Creator Workflow Release. It is ready for small to medium creator photo and video review workflows with local-first analysis, static reports, human decisions, safe organization, and an early local GUI.
+Media Agent is currently at **v0.3.3 Desktop Launcher** after the v0.3.0 Creator Workflow Release. It is ready for small to medium creator photo and video review workflows with local-first analysis, static reports, human decisions, safe organization, an early local GUI, and a macOS desktop launcher.
 
 ## License
 
