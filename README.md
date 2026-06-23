@@ -579,6 +579,14 @@ Video support is based on keyframe extraction. The system does not analyze full 
 - Included memory-safe recommendation logic and local face/person signal detection for more conservative review recommendations.
 - Kept the project local-first, non-destructive, bilingual, and free of external AI API dependencies.
 
+### v0.3.1 - Local GUI Prototype
+
+- Added a local Streamlit GUI prototype in `app.py`.
+- Wrapped the existing CLI workflow for photo analysis, video analysis, photo organization, and video organization.
+- Kept media processing local and avoided any cloud upload behavior.
+- Added GUI-specific dependency installation through `requirements-gui.txt`.
+- Preserved direct CLI usage for automation and advanced workflows.
+
 ## Installation
 
 Clone the repository, enter the project directory, create a virtual environment, and install dependencies:
@@ -589,6 +597,12 @@ cd media-agent
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+```
+
+For the local GUI prototype, install the optional GUI dependencies:
+
+```bash
+pip install -r requirements-gui.txt
 ```
 
 Replace the repository URL and directory name if you are using a fork.
@@ -628,6 +642,23 @@ http://localhost:8000/video_report.html
 Using local HTTP is recommended over directly opening `file://` reports because some browsers restrict JavaScript, localStorage, or downloads on local file URLs.
 
 ## Usage
+
+### Local GUI Prototype
+
+Run the local Streamlit interface:
+
+```bash
+streamlit run app.py
+```
+
+The GUI is local only. Media files are not uploaded, and the app wraps the existing CLI workflow with form inputs for:
+
+- Photo Analysis
+- Video Analysis
+- Organize Photos
+- Organize Videos
+
+The command-line workflow remains available for direct automation and batch use.
 
 ### Basic Scan
 
@@ -918,7 +949,7 @@ python main.py --decisions decisions.csv --organize-output organized_media --org
 
 ## Status
 
-Media Agent is currently at **v0.3.0 Creator Workflow Release**. It is ready for small to medium creator photo and video review workflows with local-first analysis, static reports, human decisions, and safe organization.
+Media Agent is currently at **v0.3.1 Local GUI Prototype** after the v0.3.0 Creator Workflow Release. It is ready for small to medium creator photo and video review workflows with local-first analysis, static reports, human decisions, safe organization, and an early local GUI.
 
 ## License
 
