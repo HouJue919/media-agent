@@ -4,7 +4,7 @@ AI-assisted visual asset management for photographers and content creators.
 
 [![Media Agent CI](https://github.com/HouJue919/media-agent/actions/workflows/test.yml/badge.svg)](https://github.com/HouJue919/media-agent/actions/workflows/test.yml)
 
-Current release: v0.3.3 Desktop Launcher
+Current release: v0.3.4 GUI Bilingual Interface
 
 Media Agent is now a photo and video asset management system for creators.
 
@@ -29,7 +29,7 @@ Modern photo libraries often contain hundreds or thousands of images from camera
 - Let the user make final decisions in an HTML report.
 - Safely organize selected files without deleting originals.
 
-The current release is **v0.3.3 Desktop Launcher**.
+The current release is **v0.3.4 GUI Bilingual Interface**.
 
 ## Screenshots
 
@@ -605,6 +605,13 @@ Video support is based on keyframe extraction. The system does not analyze full 
 - Checks for Python, `requirements-gui.txt`, and Streamlit before launching.
 - Keeps the launcher local-only and non-destructive.
 
+### v0.3.4 - GUI Bilingual Interface
+
+- Added English and Chinese interface language switching to the Streamlit GUI.
+- Kept interface language and report language as separate controls.
+- Preserved the local-only workflow; media files are not uploaded.
+- Kept the GUI as a wrapper around the existing CLI workflow.
+
 ## Installation
 
 Clone the repository, enter the project directory, create a virtual environment, and install dependencies:
@@ -677,6 +684,13 @@ The GUI is local only. Media files are not uploaded, and the app wraps the exist
 - Organize Videos
 
 The interface is organized into Analyze, Organize, and Help tabs. It shows the final CLI command before running, displays stdout/stderr after execution, and provides local links to generated reports and output folders when available.
+
+Choose:
+
+- Interface Language: English / 中文
+- Report Language: en / zh
+
+Interface Language controls the GUI text. Report Language controls the generated HTML report language, so the GUI can be Chinese while the report is English, or the GUI can be English while the report is Chinese.
 
 The command-line workflow remains available for direct automation and batch use.
 
@@ -985,7 +999,7 @@ python main.py --decisions decisions.csv --organize-output organized_media --org
 
 ## Status
 
-Media Agent is currently at **v0.3.3 Desktop Launcher** after the v0.3.0 Creator Workflow Release. It is ready for small to medium creator photo and video review workflows with local-first analysis, static reports, human decisions, safe organization, an early local GUI, and a macOS desktop launcher.
+Media Agent is currently at **v0.3.4 GUI Bilingual Interface** after the v0.3.0 Creator Workflow Release. It is ready for small to medium creator photo and video review workflows with local-first analysis, static reports, human decisions, safe organization, an early bilingual local GUI, and a macOS desktop launcher.
 
 ## License
 

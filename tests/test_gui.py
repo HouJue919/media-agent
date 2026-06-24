@@ -19,10 +19,23 @@ def test_gui_key_ui_text_exists() -> None:
     assert app.APP_TITLE == "Media Agent"
     assert app.APP_SUBTITLE == "Local photo and video asset management for creators."
     assert app.PRIVACY_NOTICE == "All processing runs locally. Media files are not uploaded."
+    assert "en" in app.UI_TEXT
+    assert "zh" in app.UI_TEXT
+    assert app.t("privacy", "en") == "All processing runs locally. Media files are not uploaded."
+    assert app.t("privacy", "zh") == "所有处理都在本地运行，媒体文件不会被上传。"
+    assert app.t("missing_key", "zh") == "missing_key"
+    assert "Interface Language / 界面语言" in source
+    assert "report_language" in source
+    assert "Report Language" in source
+    assert "所有处理都在本地运行" in source
+    assert "All processing runs locally" in source
     assert "Analyze" in source
     assert "Organize" in source
     assert "Help" in source
-    assert "copy is recommended; move changes file locations" in source
+    assert "分析" in source
+    assert "整理" in source
+    assert "帮助" in source
+    assert "Copy is recommended; move changes file locations." in source
     assert app.GITHUB_REPO_URL == "https://github.com/HouJue919/media-agent"
 
 
